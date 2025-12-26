@@ -1,3 +1,4 @@
+import { Logger } from "homebridge";
 import { GatewayConfig, BluTrvDevice, TrvState } from "./types";
 
 function buildUrl(host: string, path: string, token?: string) {
@@ -6,48 +7,86 @@ function buildUrl(host: string, path: string, token?: string) {
 }
 
 export class ShellyApi {
-  constructor(private readonly gw: GatewayConfig) {}
+  constructor(private readonly gw: GatewayConfig, private readonly log: Logger) {}
+  private readonly requestTimeout = 5000;
 
   private async get(path: string) {
-    const res = await fetch(
-      buildUrl(this.gw.host, path, this.gw.token),
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const url = buildUrl(this.gw.host, path, this.gw.token);
+    this.log.debug(`[ShellyApi] Fetching: ${this.gw.host}${path}`);
+    try {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(this.requestTimeout)
+      });
+      if (!res.ok) {
+        this.log.error(`[ShellyApi] HTTP ${res.status} from gateway ${this.gw.host}`);
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      this.log.debug(`[ShellyApi] Successfully fetched from ${this.gw.host}${path}`);
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        this.log.error(`[ShellyApi] Request failed to ${this.gw.host}: ${error.message}`);
+      }
+      throw error;
+    }
   }
 
   async discoverTrvs(): Promise<BluTrvDevice[]> {
-    const status = await this.get("/status");
-    return (status.ble?.devices ?? [])
-      .filter((d: any) => d.type === "trv")
-      .map((d: any) => ({
-        id: d.id,
-        name: d.name || `BLU TRV ${d.id}`
-      }));
+    this.log.debug(`[ShellyApi] Discovering TRVs from gateway ${this.gw.host}`);
+    try {
+      const status = await this.get("/status");
+      const trvs = (status.ble?.devices ?? [])
+        .filter((d: any) => d.type === "trv")
+        .map((d: any) => ({
+          id: d.id,
+          name: d.name || `BLU TRV ${d.id}`
+        }));
+      this.log.debug(`[ShellyApi] Found ${trvs.length} TRV(s) on gateway ${this.gw.host}`);
+      return trvs;
+    } catch (error) {
+      this.log.error(`[ShellyApi] Failed to discover TRVs: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
 
   async getTrvState(id: number): Promise<TrvState> {
-    const rpc = await this.get(
-      `/rpc/BluTrv.call&id=${id}&method=TRV.GetStatus`
-    );
+    this.log.debug(`[ShellyApi] Fetching state for TRV ${id}`);
+    try {
+      const rpc = await this.get(
+        `/rpc/BluTrv.call&id=${id}&method=TRV.GetStatus`
+      );
 
-    const status = await this.get("/status");
-    const dev = status.ble.devices.find((d: any) => d.id === id);
+      const status = await this.get("/status");
+      const dev = status.ble.devices.find((d: any) => d.id === id);
 
-    return {
-      currentTemp: rpc.current_C,
-      targetTemp: rpc.target_C,
-      valve: rpc.pos,
-      battery: dev?.battery ?? 0,
-      online: !!dev?.online
-    };
+      const state = {
+        currentTemp: rpc.current_C,
+        targetTemp: rpc.target_C,
+        valve: rpc.pos,
+        battery: dev?.battery ?? 0,
+        online: !!dev?.online
+      };
+
+      this.log.debug(`[ShellyApi] TRV ${id} state: temp=${state.currentTemp}°C, target=${state.targetTemp}°C, valve=${state.valve}%, battery=${state.battery}%, online=${state.online}`);
+      return state;
+    } catch (error) {
+      this.log.error(`[ShellyApi] Failed to get TRV ${id} state: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
 
   async setTargetTemp(id: number, value: number) {
-    await this.get(
-      `/rpc/BluTrv.call&id=${id}&method=TRV.SetTarget&params=` +
-      encodeURIComponent(JSON.stringify({ target_C: value }))
-    );
+    this.log.debug(`[ShellyApi] Setting target temperature for TRV ${id} to ${value}°C`);
+    try {
+      await this.get(
+        `/rpc/BluTrv.call&id=${id}&method=TRV.SetTarget&params=` +
+        encodeURIComponent(JSON.stringify({ target_C: value }))
+      );
+      this.log.debug(`[ShellyApi] Successfully set target temperature for TRV ${id}`);
+    } catch (error) {
+      this.log.error(`[ShellyApi] Failed to set target temperature for TRV ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
 }

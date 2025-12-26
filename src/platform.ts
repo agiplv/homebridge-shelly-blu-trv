@@ -19,23 +19,38 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API
   ) {
-    api.on("didFinishLaunching", () => this.discover());
+    this.log.debug("[ShellyBluPlatform] Initializing platform");
+    api.on("didFinishLaunching", () => {
+      this.log.debug("[ShellyBluPlatform] Homebridge finished launching, starting device discovery");
+      this.discover();
+    });
   }
 
   configureAccessory(accessory: PlatformAccessory) {
+    this.log.debug(`[ShellyBluPlatform] Configuring cached accessory: ${accessory.displayName}`);
     this.accessories.set(accessory.UUID, accessory);
   }
 
   async discover() {
-    for (const gw of (this.config.gateways ?? []) as GatewayConfig[]) {
-      const api = new ShellyApi(gw);
+    const gateways = (this.config.gateways ?? []) as GatewayConfig[];
+    if (gateways.length === 0) {
+      this.log.warn("[ShellyBluPlatform] No gateways configured in config.json");
+      return;
+    }
+
+    this.log.info(`[ShellyBluPlatform] Starting device discovery for ${gateways.length} gateway(s)`);
+
+    for (const gw of gateways) {
+      this.log.debug(`[ShellyBluPlatform] Discovering devices on gateway: ${gw.host}`);
+      const api = new ShellyApi(gw, this.log);
       const pollMs = (gw.pollInterval ?? 60) * 1000;
 
       let trvs;
       try {
         trvs = await api.discoverTrvs();
-      } catch {
-        this.log.error(`Gateway ${gw.host} unreachable`);
+        this.log.info(`[ShellyBluPlatform] Discovered ${trvs.length} TRV(s) on gateway ${gw.host}`);
+      } catch (error) {
+        this.log.error(`[ShellyBluPlatform] Failed to discover devices on gateway ${gw.host}: ${error instanceof Error ? error.message : String(error)}`);
         continue;
       }
 
@@ -44,26 +59,32 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
         let acc = this.accessories.get(uuid);
 
         if (!acc) {
+          this.log.info(`[ShellyBluPlatform] Adding new accessory: ${trv.name} (ID: ${trv.id})`);
           acc = new this.api.platformAccessory(trv.name, uuid);
           acc.context.device = trv;
           acc.context.gateway = gw;
-          new ShellyTrvAccessory(this, acc);
+          new ShellyTrvAccessory(this, acc, this.log);
           this.api.registerPlatformAccessories(
             PLATFORM_NAME,
             PLATFORM_NAME,
             [acc]
           );
           this.accessories.set(uuid, acc);
+        } else {
+          this.log.debug(`[ShellyBluPlatform] Accessory already cached: ${trv.name}`);
         }
 
         const poll = async () => {
           try {
+            this.log.debug(`[ShellyBluPlatform] Polling state for TRV ${trv.id}`);
             this.stateCache.set(trv.id, await api.getTrvState(trv.id));
-          } catch {
+          } catch (error) {
+            this.log.warn(`[ShellyBluPlatform] Failed to poll TRV ${trv.id}: ${error instanceof Error ? error.message : String(error)}`);
             this.stateCache.markOffline(trv.id);
           }
         };
 
+        this.log.debug(`[ShellyBluPlatform] Starting polling for TRV ${trv.id} with interval ${pollMs}ms`);
         poll();
         setInterval(poll, pollMs);
       }
