@@ -1,0 +1,33 @@
+{
+  "pluginAlias": "ShellyBluTRV",
+  "pluginType": "platform",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "gateways": {
+        "type": "array",
+        "title": "Shelly BLU Gateways",
+        "items": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string",
+              "title": "Gateway IP / Hostname",
+              "required": true
+            },
+            "token": {
+              "type": "string",
+              "title": "Auth token (optional)"
+            },
+            "pollInterval": {
+              "type": "number",
+              "title": "Polling interval (seconds)",
+              "default": 60,
+              "minimum": 15
+            }
+          }
+        }
+      }
+    }
+  }
+}

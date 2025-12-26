@@ -1,0 +1,43 @@
+{
+  "name": "homebridge-shelly-blu-trv",
+  "displayName": "Shelly BLU TRV",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for Shelly BLU TRV thermostats via Shelly BLU Gateway Gen3",
+  "license": "MIT",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "homepage": "https://github.com/yourname/homebridge-shelly-blu-trv",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourname/homebridge-shelly-blu-trv.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourname/homebridge-shelly-blu-trv/issues"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "shelly",
+    "blu",
+    "trv",
+    "thermostat"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18.0.0",
+    "homebridge": ">=1.6.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "homebridge": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "typescript": "^5.3.3"
+  }
+}
