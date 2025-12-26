@@ -1,4 +1,4 @@
-import { PlatformAccessory, Service } from "homebridge";
+import { PlatformAccessory } from "homebridge";
 import { ShellyBluPlatform } from "./platform";
 import { ShellyApi } from "./shellyApi";
 
@@ -15,15 +15,16 @@ export class ShellyTrvAccessory {
 
   private bind() {
     const C = this.platform.api.hap.Characteristic;
-    const t = this.accessory.getService(Service.Thermostat)!;
-    const b = this.accessory.getService(Service.Battery)!;
+    const S = this.platform.api.hap.Service;
+    const t = this.accessory.getService(S.Thermostat)!;
+    const b = this.accessory.getService(S.Battery)!;
 
     t.getCharacteristic(C.CurrentTemperature).onGet(() => this.get("currentTemp"));
     t.getCharacteristic(C.TargetTemperature)
       .onGet(() => this.get("targetTemp"))
       .onSet(v => this.setTarget(v as number));
 
-    t.getCharacteristic(C.RelativeHumidity).onGet(() => this.get("valve"));
+    t.getCharacteristic(C.CurrentRelativeHumidity).onGet(() => this.get("valve"));
     b.getCharacteristic(C.BatteryLevel).onGet(() => this.get("battery"));
   }
 
