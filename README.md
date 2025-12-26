@@ -1,10 +1,3 @@
-Here’s a complete **README.md** tailored for your **Homebridge Shelly BLU TRV plugin** — with installation, configuration, usage, and explanation of how the Shelly BLU Gateway and TRV devices work. This follows common Homebridge plugin README conventions and documents things clearly for users and for publishing on GitHub/NPM.
-
----
-
-## 📄 **README.md**
-
-````markdown
 # Homebridge Shelly BLU TRV
 
 **Homebridge plugin for Shelly BLU Thermostatic Radiator Valve (TRV) devices  
@@ -144,19 +137,5 @@ You can customize this in 3rd‑party apps if desired.
 Contributions are welcome!
 Please follow Homebridge development guidelines when adding features or fixes. ([GitHub][2])
 
----
-
-## 📄 License
-
-MIT © Your Name
-
-```
-
----
-
-If you want, I can also help generate a **GitHub repository template** with this README pre‑filled (including badges, contribution guidelines, versioning, etc.) — just let me know!
-::contentReference[oaicite:5]{index=5}
-```
-
-[1]: https://shelly-api-docs.shelly.cloud/gen2/Devices/Gen3/ShellyBluGwG3?utm_source=chatgpt.com "Shelly BLU Gateway Gen3 | Shelly Technical Documentation"
+api-docs.shelly.cloud/gen2/Devices/Gen3/ShellyBluGwG3?utm_source=chatgpt.com "Shelly BLU Gateway Gen3 | Shelly Technical Documentation"
 [2]: https://github.com/homebridge/homebridge-plugin-template?utm_source=chatgpt.com "GitHub - homebridge/homebridge-plugin-template: A template you can use to create your own Homebridge plugins."
