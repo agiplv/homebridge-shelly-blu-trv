@@ -36,7 +36,8 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "echo \"No tests specified\" && exit 0",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
@@ -44,9 +45,11 @@
   },
   "devDependencies": {
     "@types/node": "^18.19.0",
-    "typescript": "^5.3.3",
-    "eslint": "^8.47.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0"
+    "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^8.47.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.1"
   }
 }
