@@ -15,10 +15,6 @@
               "title": "Gateway IP / Hostname",
               "required": true
             },
-            "token": {
-              "type": "string",
-              "title": "Auth token (optional)"
-            },
             "pollInterval": {
               "type": "number",
               "title": "Polling interval (seconds)",

@@ -40,7 +40,6 @@ Add the platform to your Homebridge `config.json`. You **must** specify each gat
   "gateways": [
     {
       "host": "192.168.1.10",
-      "token": "your-gateway-token",
       "pollInterval": 60,
       "devices": [
         { "id": 123, "name": "Living Room" },
@@ -54,7 +53,6 @@ Add the platform to your Homebridge `config.json`. You **must** specify each gat
 ### Config Options
 
 - `host` (string, required): IP or hostname of your Shelly Plus/Pro Gateway
-- `token` (string, required): Gateway authentication token
 - `pollInterval` (number, optional): Polling interval in seconds (default: 60)
 - `devices` (array, required): List of TRVs to control. Each device must have:
   - `id` (number, required): TRV device ID (as shown in the Shelly app or web UI)
@@ -69,7 +67,7 @@ Once configured, your Shelly BLU TRVs will appear in HomeKit as Thermostat acces
 ## Troubleshooting
 
 - Ensure your Homebridge server can reach the Shelly Gateway and TRVs on the local network.
-- Double-check the device IDs and gateway token.
+Double-check the device IDs.
 - Check Homebridge logs for errors.
 
 

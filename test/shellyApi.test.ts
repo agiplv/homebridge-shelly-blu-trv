@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ShellyApi } from '../src/shellyApi';
 
-const gw = { host: '1.2.3.4', token: 'secret' } as any;
+const gw = { host: '1.2.3.4' } as any;
 let fetchMock: any;
 
 beforeEach(() => {
   fetchMock = vi.fn();
-  // @ts-expect-error - set Fetch mock on global
   globalThis.fetch = fetchMock;
 });
 

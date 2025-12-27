@@ -2,7 +2,6 @@ export const PLATFORM_NAME = "ShellyBluTRV";
 
 export interface GatewayConfig {
   host: string;
-  token?: string;
   pollInterval?: number;
   devices: BluTrvDevice[];
 }

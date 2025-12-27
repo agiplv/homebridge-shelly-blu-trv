@@ -150,7 +150,7 @@ describe('ShellyBluPlatform', () => {
     };
 
     const log = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as any;
-    const config = { gateways: [{ host: 'gw', token: 't', pollInterval: 60, devices: [{ id: 7, name: 'Bedroom' }] }] } as any;
+    const config = { gateways: [{ host: 'gw', pollInterval: 60, devices: [{ id: 7, name: 'Bedroom' }] }] } as any;
 
     const stateSpy = vi.spyOn(ShellyApi.prototype, 'getTrvState').mockResolvedValue({ currentTemp: 16, targetTemp: 20, valve: 30, battery: 66, online: true });
 

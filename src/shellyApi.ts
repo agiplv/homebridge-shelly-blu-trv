@@ -1,9 +1,8 @@
 import { Logger } from "homebridge";
 import { GatewayConfig, BluTrvDevice, TrvState } from "./types";
 
-function buildUrl(host: string, path: string, token?: string) {
-  const base = `http://${host}${path}`;
-  return token ? `${base}?auth_key=${token}` : base;
+function buildUrl(host: string, path: string) {
+  return `http://${host}${path}`;
 }
 
 export class ShellyApi {
@@ -11,7 +10,7 @@ export class ShellyApi {
   private readonly requestTimeout = 60000; // 1 minute timeout
 
   private async get(path: string) {
-    const url = buildUrl(this.gw.host, path, this.gw.token);
+    const url = buildUrl(this.gw.host, path);
     this.log.debug(`[ShellyApi] Fetching: ${this.gw.host}${path}`);
     try {
       const res = await fetch(url, {
@@ -72,7 +71,7 @@ export class ShellyApi {
 
     // Fallback: try POST to /rpc/BluTrv.call with JSON body
     try {
-      const url = buildUrl(this.gw.host, '/rpc/BluTrv.call', this.gw.token);
+      const url = buildUrl(this.gw.host, '/rpc/BluTrv.call');
       const res = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({ id, method, params }),
