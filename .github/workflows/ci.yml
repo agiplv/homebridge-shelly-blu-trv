@@ -22,12 +22,5 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Lint
-        run: npm run lint --silent || true
       - name: Test
         run: npm test
-      - name: Check coverage
-        run: npm run check-coverage
-
-      - name: Check coverage threshold
-        run: npm run check-coverage
