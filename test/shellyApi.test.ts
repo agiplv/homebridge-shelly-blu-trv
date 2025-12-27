@@ -6,7 +6,7 @@ let fetchMock: any;
 
 beforeEach(() => {
   fetchMock = vi.fn();
-  // @ts-ignore
+  // @ts-expect-error - set Fetch mock on global
   globalThis.fetch = fetchMock;
 });
 
@@ -48,5 +48,39 @@ describe('ShellyApi', () => {
     const api = new ShellyApi(gw, { debug: () => {} } as any);
     await expect(api.setTargetTemp(5, 21)).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it('falls back to alternate RPC variant (&id=) when ?id= returns 404', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('TRV.GetStatus')) {
+        if (url.includes('?id=')) return { ok: false, status: 404 } as any;
+        if (url.includes('&id=')) return { ok: true, json: async () => ({ current_C: 21, target_C: 22, pos: 42 }) } as any;
+      }
+      // /status
+      return { ok: true, json: async () => ({ ble: { devices: [{ id: 100, battery: 60, online: true }] } }) } as any;
+    });
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
+    const s = await api.getTrvState(100);
+    expect(s.currentTemp).toBe(21);
+    expect(s.battery).toBe(60);
+  });
+
+  it('falls back to POST /rpc/BluTrv.call when GET variants return 404', async () => {
+    fetchMock.mockImplementation(async (url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('TRV.GetStatus')) {
+        return { ok: false, status: 404 } as any;
+      }
+      if (typeof url === 'string' && url.includes('/rpc/BluTrv.call') && opts && opts.method === 'POST') {
+        // partially inspect body to ensure params passed
+        return { ok: true, json: async () => ({ current_C: 18, target_C: 19, pos: 33 }) } as any;
+      }
+      // /status
+      return { ok: true, json: async () => ({ ble: { devices: [{ id: 200, battery: 70, online: true }] } }) } as any;
+    });
+
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
+    const s = await api.getTrvState(200);
+    expect(s.currentTemp).toBe(18);
+    expect(s.battery).toBe(70);
   });
 });

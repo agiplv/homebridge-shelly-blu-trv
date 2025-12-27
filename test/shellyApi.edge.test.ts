@@ -6,7 +6,7 @@ let fetchMock: any;
 
 beforeEach(() => {
   fetchMock = vi.fn();
-  // @ts-ignore
+  // @ts-expect-error - set Fetch mock on global
   globalThis.fetch = fetchMock;
 });
 

@@ -57,8 +57,8 @@ export class ShellyTrvAccessory {
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE
       );
     }
-    // accessing dynamic state keys
-    const value = (s as any)[key];
+    // accessing typed state keys
+    const value = s[key];
     this.log.debug(`[${this.accessory.displayName}] Retrieved ${key}: ${value}`);
     return value;
   }

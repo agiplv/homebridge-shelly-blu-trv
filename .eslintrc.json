@@ -11,5 +11,15 @@
     "node": true,
     "es2022": true
   },
-  "rules": {}
+  "rules": {},
+  "overrides": [
+    {
+      "files": ["test/**/*.ts","hb-test/**/*.js"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/ban-ts-comment": "off",
+        "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
+      }
+    }
+  ]
 }

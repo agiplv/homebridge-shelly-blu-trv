@@ -18,17 +18,71 @@ export class ShellyApi {
         signal: AbortSignal.timeout(this.requestTimeout)
       });
       if (!res.ok) {
-        this.log.error(`[ShellyApi] HTTP ${res.status} from gateway ${this.gw.host}`);
-        throw new Error(`HTTP ${res.status}`);
+        // Try to extract body text for better diagnostics
+        let bodyText = '';
+        try {
+          bodyText = await res.text();
+        } catch {
+          bodyText = '<no body>';
+        }
+        this.log.error(`[ShellyApi] HTTP ${res.status} from gateway ${this.gw.host}${path} - ${bodyText}`);
+        throw new Error(`HTTP ${res.status}: ${bodyText}`);
       }
       const data = await res.json();
       this.log.debug(`[ShellyApi] Successfully fetched from ${this.gw.host}${path}`);
       return data;
     } catch (error) {
       if (error instanceof Error) {
-        this.log.error(`[ShellyApi] Request failed to ${this.gw.host}: ${error.message}`);
+        this.log.error(`[ShellyApi] Request failed to ${this.gw.host}${path}: ${error.message}`);
       }
       throw error;
+    }
+  }
+
+  private async rpcCall(id: number, method: string, params?: unknown) {
+    // Try several RPC variants for wider compatibility with firmware differences
+    const paramsStr = params ? `&params=${encodeURIComponent(JSON.stringify(params))}` : '';
+    const candidates = [
+      `/rpc/BluTrv.call?id=${id}&method=${method}${paramsStr}`,
+      `/rpc/BluTrv.call&id=${id}&method=${method}${paramsStr}`
+    ];
+
+    for (const path of candidates) {
+      try {
+        return await this.get(path);
+      } catch (err) {
+        // If 404, try next candidate; otherwise propagate
+        if (err instanceof Error && err.message.includes('HTTP 404')) {
+          this.log.debug(`[ShellyApi] RPC variant failed (404), trying next: ${path}`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    // Fallback: try POST to /rpc/BluTrv.call with JSON body
+    try {
+      const url = buildUrl(this.gw.host, '/rpc/BluTrv.call', this.gw.token);
+      const res = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify({ id, method, params }),
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(this.requestTimeout)
+      });
+      if (!res.ok) {
+        let bodyText = '';
+        try {
+          bodyText = await res.text();
+        } catch {
+          bodyText = '<no body>';
+        }
+        this.log.error(`[ShellyApi] HTTP ${res.status} from gateway ${this.gw.host} (POST /rpc/BluTrv.call): ${bodyText}`);
+        throw new Error(`HTTP ${res.status}: ${bodyText}`);
+      }
+      return res.json();
+    } catch (err) {
+      this.log.error(`[ShellyApi] RPC call failed for TRV ${id} method ${method}: ${err instanceof Error ? err.message : String(err)}`);
+      throw err;
     }
   }
 
@@ -56,9 +110,7 @@ export class ShellyApi {
     this.log.debug(`[ShellyApi] Fetching state for TRV ${id}`);
     try {
       interface RpcStatus { current_C: number; target_C: number; pos: number }
-      const rpc: RpcStatus = await this.get(
-        `/rpc/BluTrv.call&id=${id}&method=TRV.GetStatus`
-      );
+      const rpc: RpcStatus = await this.rpcCall(id, 'TRV.GetStatus');
 
       const status: { ble?: { devices?: { id?: number; battery?: number; online?: boolean }[] } } = await this.get("/status");
       const dev = status.ble?.devices?.find((d) => d.id === id);
@@ -82,10 +134,7 @@ export class ShellyApi {
   async setTargetTemp(id: number, value: number) {
     this.log.debug(`[ShellyApi] Setting target temperature for TRV ${id} to ${value}°C`);
     try {
-      await this.get(
-        `/rpc/BluTrv.call&id=${id}&method=TRV.SetTarget&params=` +
-        encodeURIComponent(JSON.stringify({ target_C: value }))
-      );
+      await this.rpcCall(id, 'TRV.SetTarget', { target_C: value });
       this.log.debug(`[ShellyApi] Successfully set target temperature for TRV ${id}`);
     } catch (error) {
       this.log.error(`[ShellyApi] Failed to set target temperature for TRV ${id}: ${error instanceof Error ? error.message : String(error)}`);

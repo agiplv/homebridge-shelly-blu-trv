@@ -99,22 +99,38 @@ To ensure coverage is sufficient:
 
 ## Publishing
 
-Automatic publishing is configured to run on new GitHub releases (see `.github/workflows/publish.yml`).
-To publish manually:
+- The repository contains two publishing workflows:
+  - **Publish** (`.github/workflows/publish.yml`) — runs when a GitHub Release is *created* and performs an `npm publish` step.
+  - **Semantic Release** (`.github/workflows/semantic-release.yml`) — when enabled, automatically creates releases, changelogs and publishes to npm on `main` via `semantic-release`.
 
-1. Ensure you're logged in to npm (`npm login`).
+**NOTE:** The automatic semantic-release runs are currently **paused** (workflow trigger switched to `workflow_dispatch`). To run it manually: go to the Actions tab → **Semantic Release** → **Run workflow** (choose `main`).
+
+Manual publish steps
+
+1. Ensure you're logged in to npm: `npm login`.
 2. Build the package: `npm run build`.
-3. Bump the version and push tags, or run `npm version <patch|minor|major>` and push tags.
-4. Publish: `npm publish --access public`.
+3. Bump the package version (e.g. `npm version patch`) and push the tag.
+4. Create a GitHub Release (or run `npm publish --access public` manually).
 
-Automated semantic releases are configured with `semantic-release`. The workflow runs on pushes to `main` and publishes a GitHub Release + npm package when a new release is performed.
+Developer notes about `NPM_TOKEN` and automation
 
-Note: You must add the following repository secrets for automatic publishing to work:
+- For CI-based publishing you must set the repository secret `NPM_TOKEN` (Settings → Secrets → Actions) to a valid **npm automation token** with publish rights.
+  - Create it on npm: Settings → Access Tokens → **Create New Token** → choose **Automation** and ensure it has publish rights.
+  - If your npm account uses Two-Factor Authentication (2FA), pick a token that is usable for CI (set 2FA to **Authorization only** for automation tokens). See https://docs.npmjs.com/getting-started/working_with_tokens for details.
+- If semantic-release reports `EINVALIDNPMTOKEN` or `401 Unauthorized`, try re-creating the token and updating `NPM_TOKEN` in repo secrets.
+- The repository also includes a Publish workflow (triggered on Release creation) which can publish even if semantic-release is paused — this is useful for one-off releases.
 
-- `NPM_TOKEN` — npm token with publish permissions
-- `GITHUB_TOKEN` — typically provided automatically by GitHub Actions (`secrets.GITHUB_TOKEN`) but keep it available if you customize tokens
+E2E and local verification (developer)
 
-If you'd like me to open a PR with this setup and add a draft release, say so and I will create the branch and PR now.
+- Run the E2E runner locally: `npm run e2e` — this will install deps, build the project, install a local shim, start the fake gateway and a headless Homebridge instance and look for discovery/polling logs.
+- Run unit tests + coverage: `npm test` (creates `coverage/lcov.info` and an `lcov-report` directory).
+- Check coverage threshold: `npm run check-coverage` (defaults to 80% lines; use `COVERAGE_THRESHOLD` to override).
+
+If you'd like, I can add a small diagnostic Action that runs `npm whoami` using `NPM_TOKEN` (safely) so you can quickly confirm which npm account the token maps to before re-enabling semantic-release.
+
+---
+
+If you want this documentation expanded into a `DEVELOPING.md` file or want me to add the diagnostic Action, tell me which and I'll add it in a PR.
 
 ## License
 
