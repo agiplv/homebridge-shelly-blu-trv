@@ -25,21 +25,41 @@ describe('ShellyApi', () => {
   });
 
   it('parses TRV state', async () => {
-    // First call: RPC status
+    // First call: RPC status (generic TRV.GetStatus)
     fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes('TRV.GetStatus')) {
+      if (url.includes('TRV.GetStatus') || url.includes('BluTrv.GetStatus')) {
         return { ok: true, json: async () => ({ current_C: 19.5, target_C: 22, pos: 75 }) };
       }
-      // second call: /status
+      // second call: /status (fallback)
       return { ok: true, json: async () => ({ ble: { devices: [{ id: 20, battery: 50, online: true }] } }) };
     });
 
-    const api = new ShellyApi(gw, { debug: () => {} } as any);
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
     const s = await api.getTrvState(20);
     expect(s.currentTemp).toBe(19.5);
     expect(s.targetTemp).toBe(22);
     expect(s.valve).toBe(75);
     expect(s.battery).toBe(50);
+    expect(s.online).toBe(true);
+  });
+
+  it('parses TRV state from BluTrv.GetStatus endpoint', async () => {
+    // This variant returns battery and paired directly so plugin should not call /status
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('BluTrv.GetStatus')) {
+        return { ok: true, json: async () => ({ id: 200, target_C: 4.3, current_C: 24.7, pos: 0, errors: ['not_calibrated'], rssi: -41, battery: 100, packet_id: 64, last_updated_ts: 1736161958, paired: true, rpc: true, rsv: 19 }) };
+      }
+      // If /status is called, fail the test by returning 404
+      if (url.includes('/status')) return { ok: false, status: 404 } as any;
+      return { ok: true, json: async () => ({}) };
+    });
+
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
+    const s = await api.getTrvState(200);
+    expect(s.currentTemp).toBe(24.7);
+    expect(s.targetTemp).toBe(4.3);
+    expect(s.valve).toBe(0);
+    expect(s.battery).toBe(100);
     expect(s.online).toBe(true);
   });
 
@@ -50,9 +70,20 @@ describe('ShellyApi', () => {
     expect(fetchMock).toHaveBeenCalled();
   });
 
+  it('sets target via BluTrv.Call variant', async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('BluTrv.Call') && url.includes('TRV.SetTarget')) {
+        return { ok: true, json: async () => ({ ok: true }) } as any;
+      }
+      return { ok: false, status: 404 } as any;
+    });
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
+    await expect(api.setTargetTemp(200, 22)).resolves.toBeUndefined();
+  });
+
   it('falls back to alternate RPC variant (&id=) when ?id= returns 404', async () => {
     fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes('TRV.GetStatus')) {
+      if (url.includes('GetStatus')) {
         if (url.includes('?id=')) return { ok: false, status: 404 } as any;
         if (url.includes('&id=')) return { ok: true, json: async () => ({ current_C: 21, target_C: 22, pos: 42 }) } as any;
       }
@@ -67,11 +98,11 @@ describe('ShellyApi', () => {
 
   it('falls back to POST /rpc/BluTrv.call when GET variants return 404', async () => {
     fetchMock.mockImplementation(async (url: string, opts?: any) => {
-      if (typeof url === 'string' && url.includes('TRV.GetStatus')) {
+      if (typeof url === 'string' && url.includes('GetStatus')) {
         return { ok: false, status: 404 } as any;
       }
       if (typeof url === 'string' && url.includes('/rpc/BluTrv.call') && opts && opts.method === 'POST') {
-        // partially inspect body to ensure params passed
+        // Return correct fields for TRV state
         return { ok: true, json: async () => ({ current_C: 18, target_C: 19, pos: 33 }) } as any;
       }
       // /status

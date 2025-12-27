@@ -42,10 +42,19 @@ export class ShellyApi {
   private async rpcCall(id: number, method: string, params?: unknown) {
     // Try several RPC variants for wider compatibility with firmware differences
     const paramsStr = params ? `&params=${encodeURIComponent(JSON.stringify(params))}` : '';
-    const candidates = [
-      `/rpc/BluTrv.call?id=${id}&method=${method}${paramsStr}`,
-      `/rpc/BluTrv.call&id=${id}&method=${method}${paramsStr}`
-    ];
+
+    // Try direct GetStatus endpoints first (some firmwares expose dedicated GET endpoints)
+    const candidates: string[] = [];
+    if (method === 'TRV.GetStatus') {
+      candidates.push(`/rpc/BluTrv.GetStatus?id=${id}`);
+      candidates.push(`/rpc/BluTrv.GetStatus&id=${id}`);
+    }
+
+    // Common CALL variants (different firmware use call vs Call and different query separators)
+    candidates.push(`/rpc/BluTrv.Call?id=${id}&method=${method}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.call?id=${id}&method=${method}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.Call&id=${id}&method=${method}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.call&id=${id}&method=${method}${paramsStr}`);
 
     for (const path of candidates) {
       try {
@@ -110,17 +119,42 @@ export class ShellyApi {
     this.log.debug(`[ShellyApi] Fetching state for TRV ${id}`);
     try {
       interface RpcStatus { current_C: number; target_C: number; pos: number }
-      const rpc: RpcStatus = await this.rpcCall(id, 'TRV.GetStatus');
+      // RPC variant may return battery/paired status directly (BluTrv.GetStatus). Use RPC result first.
+          const rpcAny: any = await this.rpcCall(id, 'TRV.GetStatus');
+          const rpc: RpcStatus & { battery?: number; paired?: boolean } = rpcAny;
 
-      const status: { ble?: { devices?: { id?: number; battery?: number; online?: boolean }[] } } = await this.get("/status");
-      const dev = status.ble?.devices?.find((d) => d.id === id);
+          // Validate required fields
+          if (
+            typeof rpc.current_C !== 'number' ||
+            typeof rpc.target_C !== 'number' ||
+            typeof rpc.pos !== 'number'
+          ) {
+            throw new Error(`Missing required TRV state fields in RPC response: ${JSON.stringify(rpc)}`);
+          }
+
+      // Prefer battery/online information from RPC response; if missing, try /status as a graceful fallback
+      let battery: number | undefined = typeof rpc.battery === 'number' ? rpc.battery : undefined;
+      let online: boolean | undefined = typeof rpc.paired === 'boolean' ? rpc.paired : undefined;
+
+      if (battery === undefined || online === undefined) {
+        try {
+          const status: { ble?: { devices?: { id?: number; battery?: number; online?: boolean }[] } } = await this.get("/status");
+          const dev = status.ble?.devices?.find((d) => d.id === id);
+          battery = battery ?? dev?.battery ?? 0;
+          online = online ?? !!dev?.online;
+        } catch (err) {
+          this.log.debug(`[ShellyApi] /status fallback failed for TRV ${id}: ${err instanceof Error ? err.message : String(err)}`);
+          battery = battery ?? 0;
+          online = online ?? true;
+        }
+      }
 
       const state = {
         currentTemp: rpc.current_C,
         targetTemp: rpc.target_C,
         valve: rpc.pos,
-        battery: dev?.battery ?? 0,
-        online: !!dev?.online
+        battery: battery ?? 0,
+        online: !!online
       };
 
       this.log.debug(`[ShellyApi] TRV ${id} state: temp=${state.currentTemp}°C, target=${state.targetTemp}°C, valve=${state.valve}%, battery=${state.battery}%, online=${state.online}`);
@@ -134,7 +168,8 @@ export class ShellyApi {
   async setTargetTemp(id: number, value: number) {
     this.log.debug(`[ShellyApi] Setting target temperature for TRV ${id} to ${value}°C`);
     try {
-      await this.rpcCall(id, 'TRV.SetTarget', { target_C: value });
+      // Include an explicit id:0 in params (observed in some firmware examples)
+      await this.rpcCall(id, 'TRV.SetTarget', { id: 0, target_C: value });
       this.log.debug(`[ShellyApi] Successfully set target temperature for TRV ${id}`);
     } catch (error) {
       this.log.error(`[ShellyApi] Failed to set target temperature for TRV ${id}: ${error instanceof Error ? error.message : String(error)}`);

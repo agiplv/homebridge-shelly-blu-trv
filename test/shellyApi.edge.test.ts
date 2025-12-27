@@ -25,7 +25,7 @@ describe('ShellyApi edge cases', () => {
       return { ok: true, json: async () => ({ ble: { devices: [{ id: 33, battery: 80, online: false }] } }) };
     });
 
-    const api = new ShellyApi(gw, { debug: () => {} } as any);
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
     const s = await api.getTrvState(33);
     expect(s.online).toBe(false);
     expect(s.battery).toBe(80);
