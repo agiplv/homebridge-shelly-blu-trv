@@ -13,6 +13,7 @@ import { StateCache } from "./stateCache";
 export class ShellyBluPlatform implements DynamicPlatformPlugin {
   public readonly stateCache = new StateCache();
   private readonly accessories = new Map<string, PlatformAccessory>();
+  private readonly trvInstances = new Map<number, ShellyTrvAccessory>();
 
   constructor(
     public readonly log: Logger,
@@ -50,12 +51,13 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
       for (const trv of gw.devices) {
         const uuid = this.api.hap.uuid.generate(`${gw.host}-${trv.id}`);
         let acc = this.accessories.get(uuid);
+        let trvAcc: ShellyTrvAccessory;
         if (!acc) {
           this.log.info(`[ShellyBluPlatform] Adding new accessory: ${trv.name} (ID: ${trv.id})`);
           acc = new this.api.platformAccessory(trv.name, uuid);
           acc.context.device = trv;
           acc.context.gateway = gw;
-          new ShellyTrvAccessory(this, acc, this.log);
+          trvAcc = new ShellyTrvAccessory(this, acc, this.log);
           this.api.registerPlatformAccessories(
             PLATFORM_NAME,
             PLATFORM_NAME,
@@ -64,13 +66,17 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
           this.accessories.set(uuid, acc);
         } else {
           this.log.debug(`[ShellyBluPlatform] Accessory already cached: ${trv.name}`);
+          // If already exists, try to get the instance from map, or create if missing
+          trvAcc = this.trvInstances.get(trv.id) || new ShellyTrvAccessory(this, acc, this.log);
         }
+        this.trvInstances.set(trv.id, trvAcc);
         const poll = async () => {
           try {
             this.log.debug(`[ShellyBluPlatform] Polling state for TRV ${trv.id}`);
             const state = await api.getTrvState(trv.id);
             this.stateCache.set(trv.id, state);
             this.log.info(`[ShellyBluPlatform] Polled TRV ${trv.id} state: ${JSON.stringify(state)}`);
+            trvAcc.updateFromState(state);
           } catch (error) {
             this.log.warn(`[ShellyBluPlatform] Failed to poll TRV ${trv.id}: ${error instanceof Error ? error.message : String(error)}`);
             this.stateCache.markOffline(trv.id);

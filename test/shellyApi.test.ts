@@ -56,10 +56,21 @@ describe('ShellyApi', () => {
   });
 
   it('sets target temp via RPC', async () => {
-    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
-    const api = new ShellyApi(gw, { debug: () => {} } as any);
-    await expect(api.setTargetTemp(5, 21)).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalled();
+    let callCount = 0;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes('TRV.SetTarget')) {
+        return { ok: true, json: async () => ({ ok: true }) } as any;
+      }
+      if (url.includes('GetStatus')) {
+        callCount++;
+        return { ok: true, json: async () => ({ current_C: 20, target_C: 21, pos: 50, battery: 80, online: true }) } as any;
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
+    const result = await api.setTargetTemp(5, 21);
+    expect(result).toBeDefined();
+    expect(result.targetTemp).toBe(21);
   });
 
   it('sets target via BluTrv.Call variant', async () => {
@@ -67,10 +78,15 @@ describe('ShellyApi', () => {
       if (url.includes('BluTrv.Call') && url.includes('TRV.SetTarget')) {
         return { ok: true, json: async () => ({ ok: true }) } as any;
       }
+      if (url.includes('BluTrv.GetStatus') || url.includes('TRV.GetStatus')) {
+        return { ok: true, json: async () => ({ current_C: 20, target_C: 22, pos: 50, battery: 80, online: true }) } as any;
+      }
       return { ok: false, status: 404 } as any;
     });
     const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
-    await expect(api.setTargetTemp(200, 22)).resolves.toBeUndefined();
+    const result = await api.setTargetTemp(200, 22);
+    expect(result).toBeDefined();
+    expect(result.targetTemp).toBe(22);
   });
 
 

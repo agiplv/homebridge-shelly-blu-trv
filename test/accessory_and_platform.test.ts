@@ -43,8 +43,10 @@ function createMockAccessory(name: string, id: number, hap: any) {
             svc._charMap.set(c, {
               onGet: (fn: any) => { svc._charMap.get(c)._onGet = fn; return svc._charMap.get(c); },
               onSet: (fn: any) => { svc._charMap.get(c)._onSet = fn; return svc._charMap.get(c); },
+              updateValue: (val: any) => { svc._charMap.get(c)._value = val; },
               _onGet: undefined,
-              _onSet: undefined
+              _onSet: undefined,
+              _value: undefined
             });
           }
           return svc._charMap.get(c);
@@ -96,7 +98,7 @@ describe('ShellyTrvAccessory', () => {
     accessory.context.device.id = 2;
     const log = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as any;
 
-    const setSpy = vi.spyOn(ShellyApi.prototype, 'setTargetTemp').mockResolvedValue(undefined as any);
+    const setSpy = vi.spyOn(ShellyApi.prototype, 'setTargetTemp').mockResolvedValue({ currentTemp: 18.3, targetTemp: 23, valve: 40, battery: 77, online: true });
 
     const acc = new ShellyTrvAccessory(platform as any, accessory as any, log);
     const svc = accessory.getService(hap.Service.Thermostat);
