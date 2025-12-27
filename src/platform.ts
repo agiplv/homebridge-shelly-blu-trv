@@ -70,21 +70,6 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
           trvAcc = this.trvInstances.get(trv.id) || new ShellyTrvAccessory(this, acc, this.log);
         }
         this.trvInstances.set(trv.id, trvAcc);
-        const poll = async () => {
-          try {
-            this.log.debug(`[ShellyBluPlatform] Polling state for TRV ${trv.id}`);
-            const state = await api.getTrvState(trv.id);
-            this.stateCache.set(trv.id, state);
-            this.log.info(`[ShellyBluPlatform] Polled TRV ${trv.id} state: ${JSON.stringify(state)}`);
-            trvAcc.updateFromState(state);
-          } catch (error) {
-            this.log.warn(`[ShellyBluPlatform] Failed to poll TRV ${trv.id}: ${error instanceof Error ? error.message : String(error)}`);
-            this.stateCache.markOffline(trv.id);
-          }
-        };
-        this.log.debug(`[ShellyBluPlatform] Starting polling for TRV ${trv.id} with interval ${pollMs}ms`);
-        poll();
-        setInterval(poll, pollMs);
       }
     }
   }

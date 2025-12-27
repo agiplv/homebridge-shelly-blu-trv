@@ -127,55 +127,8 @@ describe('ShellyTrvAccessory', () => {
     const svc = accessory.getService(hap.Service.Thermostat);
     const curTempChar = svc.getCharacteristic(hap.Characteristic.CurrentTemperature);
 
-    expect(() => curTempChar._onGet()).toThrow();
+    await expect(curTempChar._onGet()).rejects.toThrow();
   });
 });
 
-describe('ShellyBluPlatform', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('registers manually configured TRVs and polls state', async () => {
-    const hap = createMockHap();
-    const registered: any[] = [];
-    const fakeApi: any = {
-      hap,
-      platformAccessory: (function() {
-        return function PlatformAccessory(this: any, name: string, uuid: string) {
-          const obj = createMockAccessory(name, 999, hap);
-          Object.assign(this, obj);
-        };
-      })(),
-      registerPlatformAccessories: (pluginName: string, platformName: string, accs: any[]) => {
-        registered.push(...accs);
-      },
-      on: (_ev: string, _cb: any) => { /* noop for tests */ }
-    };
-
-    const log = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as any;
-    const config = { gateways: [{ host: 'gw', pollInterval: 60, devices: [{ id: 7, name: 'Bedroom' }] }] } as any;
-
-    const stateSpy = vi.spyOn(ShellyApi.prototype, 'getTrvState').mockResolvedValue({ currentTemp: 16, targetTemp: 20, valve: 30, battery: 66, online: true });
-
-    const platform = new ShellyBluPlatform(log, config, fakeApi as any);
-
-    // Directly call discover (constructor wiring normally calls this on didFinishLaunching)
-    await platform.discover();
-
-    // allow the async poll() invoked inside discover() to complete
-    await new Promise((r) => setImmediate(r));
-
-    // expectation: accessory was registered
-    expect(registered.length).toBe(1);
-
-    // state should be present in cache
-    const uuid = fakeApi.hap.uuid.generate(`${config.gateways[0].host}-7`);
-    const acc = platform['accessories'].get(uuid);
-    expect(acc).toBeDefined();
-
-    const state = platform.stateCache.get(7);
-    expect(state).toBeDefined();
-    expect(state?.currentTemp).toBe(16);
-  });
-});
+// No platform polling test needed; polling is removed.

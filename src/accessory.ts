@@ -25,13 +25,15 @@ export class ShellyTrvAccessory {
 
     this.log.debug(`[${this.accessory.displayName}] Binding characteristics`);
 
-    t.getCharacteristic(C.CurrentTemperature).onGet(() => {
-      this.log.debug(`[${this.accessory.displayName}] Getting current temperature`);
+    t.getCharacteristic(C.CurrentTemperature).onGet(async () => {
+      this.log.debug(`[${this.accessory.displayName}] Getting current temperature (fetching from device)`);
+      await this.refreshState();
       return this.get("currentTemp");
     });
     t.getCharacteristic(C.TargetTemperature)
-      .onGet(() => {
-        this.log.debug(`[${this.accessory.displayName}] Getting target temperature`);
+      .onGet(async () => {
+        this.log.debug(`[${this.accessory.displayName}] Getting target temperature (fetching from device)`);
+        await this.refreshState();
         return this.get("targetTemp");
       })
       .onSet(v => {
@@ -39,14 +41,31 @@ export class ShellyTrvAccessory {
         return this.setTarget(v as number);
       });
 
-    t.getCharacteristic(C.CurrentRelativeHumidity).onGet(() => {
-      this.log.debug(`[${this.accessory.displayName}] Getting valve position`);
+    t.getCharacteristic(C.CurrentRelativeHumidity).onGet(async () => {
+      this.log.debug(`[${this.accessory.displayName}] Getting valve position (fetching from device)`);
+      await this.refreshState();
       return this.get("valve");
     });
-    b.getCharacteristic(C.BatteryLevel).onGet(() => {
-      this.log.debug(`[${this.accessory.displayName}] Getting battery level`);
+    b.getCharacteristic(C.BatteryLevel).onGet(async () => {
+      this.log.debug(`[${this.accessory.displayName}] Getting battery level (fetching from device)`);
+      await this.refreshState();
       return this.get("battery");
     });
+
+  }
+
+  /**
+   * Fetches the latest state from the device and updates the cache and Homebridge.
+   */
+  private async refreshState() {
+    try {
+      const api = new ShellyApi(this.accessory.context.gateway, this.log);
+      const state = await api.getTrvState(this.accessory.context.device.id);
+      this.platform.stateCache.set(this.accessory.context.device.id, state);
+      this.updateFromState(state);
+    } catch (error) {
+      this.log.error(`[${this.accessory.displayName}] Failed to refresh state: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   private get(key: keyof TrvState) {
