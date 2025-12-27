@@ -4,24 +4,28 @@
   "version": "1.0.0",
   "description": "Homebridge plugin for Shelly BLU TRV thermostats via Shelly BLU Gateway Gen3",
   "license": "MIT",
-  "author": {
-    "name": "Your Name",
-    "email": "you@example.com"
-  },
-  "homepage": "https://github.com/yourname/homebridge-shelly-blu-trv",
+  "author": "agiplv",
+  "homepage": "https://github.com/agiplv/homebridge-shelly-blu-trv",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourname/homebridge-shelly-blu-trv.git"
+    "url": "https://github.com/agiplv/homebridge-shelly-blu-trv.git"
   },
   "bugs": {
-    "url": "https://github.com/yourname/homebridge-shelly-blu-trv/issues"
+    "url": "https://github.com/agiplv/homebridge-shelly-blu-trv/issues"
   },
   "keywords": [
     "homebridge-plugin",
+    "homebridge-platform",
     "shelly",
-    "blu",
+    "shelly-blu",
     "trv",
     "thermostat"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "config.schema.json"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,13 +35,18 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "homebridge": "^1.7.0"
   },
   "devDependencies": {
     "@types/node": "^18.19.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "eslint": "^8.47.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0"
   }
 }

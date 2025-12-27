@@ -35,12 +35,14 @@ export class ShellyApi {
   async discoverTrvs(): Promise<BluTrvDevice[]> {
     this.log.debug(`[ShellyApi] Discovering TRVs from gateway ${this.gw.host}`);
     try {
-      const status = await this.get("/status");
-      const trvs = (status.ble?.devices ?? [])
-        .filter((d: any) => d.type === "trv")
-        .map((d: any) => ({
-          id: d.id,
-          name: d.name || `BLU TRV ${d.id}`
+      interface BleDevice { type?: string; id?: number; name?: string; battery?: number; online?: boolean }
+      const status: { ble?: { devices?: BleDevice[] } } = await this.get("/status");
+      const devices = status.ble?.devices ?? [];
+      const trvs = devices
+        .filter((d) => d.type === "trv")
+        .map((d) => ({
+          id: d.id ?? 0,
+          name: d.name || `BLU TRV ${d.id ?? 'unknown'}`
         }));
       this.log.debug(`[ShellyApi] Found ${trvs.length} TRV(s) on gateway ${this.gw.host}`);
       return trvs;
@@ -53,12 +55,13 @@ export class ShellyApi {
   async getTrvState(id: number): Promise<TrvState> {
     this.log.debug(`[ShellyApi] Fetching state for TRV ${id}`);
     try {
-      const rpc = await this.get(
+      interface RpcStatus { current_C: number; target_C: number; pos: number }
+      const rpc: RpcStatus = await this.get(
         `/rpc/BluTrv.call&id=${id}&method=TRV.GetStatus`
       );
 
-      const status = await this.get("/status");
-      const dev = status.ble.devices.find((d: any) => d.id === id);
+      const status: { ble?: { devices?: { id?: number; battery?: number; online?: boolean }[] } } = await this.get("/status");
+      const dev = status.ble?.devices?.find((d) => d.id === id);
 
       const state = {
         currentTemp: rpc.current_C,
