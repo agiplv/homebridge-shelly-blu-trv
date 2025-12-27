@@ -141,6 +141,8 @@ export class ShellyApi {
       // Include an explicit id:0 in params (observed in some firmware examples)
       await this.rpcCall(id, 'TRV.SetTarget', { id: 0, target_C: value });
       this.log.debug(`[ShellyApi] Successfully set target temperature for TRV ${id}`);
+      // Requery and return the updated state
+      return await this.getTrvState(id);
     } catch (error) {
       this.log.error(`[ShellyApi] Failed to set target temperature for TRV ${id}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
