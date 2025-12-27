@@ -95,66 +95,35 @@ export class ShellyApi {
     }
   }
 
-  async discoverTrvs(): Promise<BluTrvDevice[]> {
-    this.log.debug(`[ShellyApi] Discovering TRVs from gateway ${this.gw.host}`);
-    try {
-      interface BleDevice { type?: string; id?: number; name?: string; battery?: number; online?: boolean }
-      const status: { ble?: { devices?: BleDevice[] } } = await this.get("/status");
-      const devices = status.ble?.devices ?? [];
-      const trvs = devices
-        .filter((d) => d.type === "trv")
-        .map((d) => ({
-          id: d.id ?? 0,
-          name: d.name || `BLU TRV ${d.id ?? 'unknown'}`
-        }));
-      this.log.debug(`[ShellyApi] Found ${trvs.length} TRV(s) on gateway ${this.gw.host}`);
-      return trvs;
-    } catch (error) {
-      this.log.error(`[ShellyApi] Failed to discover TRVs: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
 
   async getTrvState(id: number): Promise<TrvState> {
     this.log.debug(`[ShellyApi] Fetching state for TRV ${id}`);
     try {
       interface RpcStatus { current_C: number; target_C: number; pos: number }
-      // RPC variant may return battery/paired status directly (BluTrv.GetStatus). Use RPC result first.
-          const rpcAny: any = await this.rpcCall(id, 'TRV.GetStatus');
-          const rpc: RpcStatus & { battery?: number; paired?: boolean } = rpcAny;
+      // Only use direct RPC response; no /status fallback
+      const rpcAny: any = await this.rpcCall(id, 'TRV.GetStatus');
+      const rpc: RpcStatus & { battery?: number; paired?: boolean; online?: boolean } = rpcAny;
 
-          // Validate required fields
-          if (
-            typeof rpc.current_C !== 'number' ||
-            typeof rpc.target_C !== 'number' ||
-            typeof rpc.pos !== 'number'
-          ) {
-            throw new Error(`Missing required TRV state fields in RPC response: ${JSON.stringify(rpc)}`);
-          }
-
-      // Prefer battery/online information from RPC response; if missing, try /status as a graceful fallback
-      let battery: number | undefined = typeof rpc.battery === 'number' ? rpc.battery : undefined;
-      let online: boolean | undefined = typeof rpc.paired === 'boolean' ? rpc.paired : undefined;
-
-      if (battery === undefined || online === undefined) {
-        try {
-          const status: { ble?: { devices?: { id?: number; battery?: number; online?: boolean }[] } } = await this.get("/status");
-          const dev = status.ble?.devices?.find((d) => d.id === id);
-          battery = battery ?? dev?.battery ?? 0;
-          online = online ?? !!dev?.online;
-        } catch (err) {
-          this.log.debug(`[ShellyApi] /status fallback failed for TRV ${id}: ${err instanceof Error ? err.message : String(err)}`);
-          battery = battery ?? 0;
-          online = online ?? true;
-        }
+      // Validate required fields
+      if (
+        typeof rpc.current_C !== 'number' ||
+        typeof rpc.target_C !== 'number' ||
+        typeof rpc.pos !== 'number'
+      ) {
+        throw new Error(`Missing required TRV state fields in RPC response: ${JSON.stringify(rpc)}`);
       }
+
+      // Use battery/online from RPC response if present, else default
+      const battery: number = typeof rpc.battery === 'number' ? rpc.battery : 0;
+      // Accept either paired or online as online indicator
+      const online: boolean = typeof rpc.online === 'boolean' ? rpc.online : (typeof rpc.paired === 'boolean' ? rpc.paired : true);
 
       const state = {
         currentTemp: rpc.current_C,
         targetTemp: rpc.target_C,
         valve: rpc.pos,
-        battery: battery ?? 0,
-        online: !!online
+        battery,
+        online
       };
 
       this.log.debug(`[ShellyApi] TRV ${id} state: temp=${state.currentTemp}°C, target=${state.targetTemp}°C, valve=${state.valve}%, battery=${state.battery}%, online=${state.online}`);

@@ -4,9 +4,8 @@ export interface GatewayConfig {
   host: string;
   token?: string;
   pollInterval?: number;
-  // Optional: manually specify TRV devices when discovery is not available
-  devices?: BluTrvDevice[];
-} 
+  devices: BluTrvDevice[];
+}
 
 export interface BluTrvDevice {
   id: number;

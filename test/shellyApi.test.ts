@@ -15,23 +15,17 @@ afterEach(() => {
 });
 
 describe('ShellyApi', () => {
-  it('discovers TRVs from status', async () => {
-    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ ble: { devices: [{ type: 'trv', id: 10, name: 'Living' }, { type: 'sensor', id: 99 }] } }) });
-    const api = new ShellyApi(gw, { debug: () => {} } as any);
-    const trvs = await api.discoverTrvs();
-    expect(trvs.length).toBe(1);
-    expect(trvs[0].id).toBe(10);
-    expect(trvs[0].name).toBe('Living');
-  });
+
+  // Discovery is no longer supported; all TRVs must be manually configured.
+
 
   it('parses TRV state', async () => {
-    // First call: RPC status (generic TRV.GetStatus)
+    // Only direct endpoint is supported
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes('TRV.GetStatus') || url.includes('BluTrv.GetStatus')) {
-        return { ok: true, json: async () => ({ current_C: 19.5, target_C: 22, pos: 75 }) };
+        return { ok: true, json: async () => ({ current_C: 19.5, target_C: 22, pos: 75, battery: 50, online: true }) };
       }
-      // second call: /status (fallback)
-      return { ok: true, json: async () => ({ ble: { devices: [{ id: 20, battery: 50, online: true }] } }) };
+      return { ok: true, json: async () => ({}) };
     });
 
     const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
@@ -43,14 +37,12 @@ describe('ShellyApi', () => {
     expect(s.online).toBe(true);
   });
 
+
   it('parses TRV state from BluTrv.GetStatus endpoint', async () => {
-    // This variant returns battery and paired directly so plugin should not call /status
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes('BluTrv.GetStatus')) {
-        return { ok: true, json: async () => ({ id: 200, target_C: 4.3, current_C: 24.7, pos: 0, errors: ['not_calibrated'], rssi: -41, battery: 100, packet_id: 64, last_updated_ts: 1736161958, paired: true, rpc: true, rsv: 19 }) };
+        return { ok: true, json: async () => ({ id: 200, target_C: 4.3, current_C: 24.7, pos: 0, errors: ['not_calibrated'], rssi: -41, battery: 100, packet_id: 64, last_updated_ts: 1736161958, paired: true, rpc: true, rsv: 19, online: true }) };
       }
-      // If /status is called, fail the test by returning 404
-      if (url.includes('/status')) return { ok: false, status: 404 } as any;
       return { ok: true, json: async () => ({}) };
     });
 
@@ -81,20 +73,22 @@ describe('ShellyApi', () => {
     await expect(api.setTargetTemp(200, 22)).resolves.toBeUndefined();
   });
 
+
   it('falls back to alternate RPC variant (&id=) when ?id= returns 404', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url.includes('GetStatus')) {
         if (url.includes('?id=')) return { ok: false, status: 404 } as any;
-        if (url.includes('&id=')) return { ok: true, json: async () => ({ current_C: 21, target_C: 22, pos: 42 }) } as any;
+        if (url.includes('&id=')) return { ok: true, json: async () => ({ current_C: 21, target_C: 22, pos: 42, battery: 60, online: true }) } as any;
       }
-      // /status
-      return { ok: true, json: async () => ({ ble: { devices: [{ id: 100, battery: 60, online: true }] } }) } as any;
+      return { ok: true, json: async () => ({}) } as any;
     });
     const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
     const s = await api.getTrvState(100);
     expect(s.currentTemp).toBe(21);
     expect(s.battery).toBe(60);
+    expect(s.online).toBe(true);
   });
+
 
   it('falls back to POST /rpc/BluTrv.call when GET variants return 404', async () => {
     fetchMock.mockImplementation(async (url: string, opts?: any) => {
@@ -103,15 +97,15 @@ describe('ShellyApi', () => {
       }
       if (typeof url === 'string' && url.includes('/rpc/BluTrv.call') && opts && opts.method === 'POST') {
         // Return correct fields for TRV state
-        return { ok: true, json: async () => ({ current_C: 18, target_C: 19, pos: 33 }) } as any;
+        return { ok: true, json: async () => ({ current_C: 18, target_C: 19, pos: 33, battery: 70, online: true }) } as any;
       }
-      // /status
-      return { ok: true, json: async () => ({ ble: { devices: [{ id: 200, battery: 70, online: true }] } }) } as any;
+      return { ok: true, json: async () => ({}) } as any;
     });
 
     const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
     const s = await api.getTrvState(200);
     expect(s.currentTemp).toBe(18);
     expect(s.battery).toBe(70);
+    expect(s.online).toBe(true);
   });
 });

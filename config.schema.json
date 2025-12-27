@@ -27,13 +27,15 @@
             },
             "devices": {
               "type": "array",
-              "title": "Manual TRV devices (optional)",
+              "title": "TRV devices (required)",
+              "minItems": 1,
               "items": {
                 "type": "object",
                 "properties": {
                   "id": { "type": "number", "title": "TRV ID", "required": true },
                   "name": { "type": "string", "title": "Display name" }
-                }
+                },
+                "required": ["id"]
               }
             }
           }

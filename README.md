@@ -3,86 +3,86 @@
 [![CI](https://github.com/agiplv/homebridge-shelly-blu-trv/actions/workflows/ci.yml/badge.svg)](https://github.com/agiplv/homebridge-shelly-blu-trv/actions)
 
 Homebridge plugin for Shelly BLU Thermostatic Radiator Valve (TRV) devices
-via the Shelly BLU Gateway Gen3.
 
-This plugin exposes BLU TRV devices to Apple HomeKit using a local Shelly BLU
-Gateway Gen3. It supports current temperature, target temperature control,
-valve position, battery level and offline detection.
+# Homebridge Shelly BLU TRV Platform Plugin
+
+Homebridge plugin for controlling Shelly BLU TRV (Thermostatic Radiator Valve) devices via a Shelly Plus/Pro Gateway. **Only manual device configuration is supported.**
 
 ## Features
 
-- BLU TRV discovery via Shelly BLU Gateway Gen3
-- Current temperature
-- Target temperature control
-- Valve position (percent)
-- Battery level
-- Offline detection
-- Multiple gateways
+- Control Shelly BLU TRV devices from HomeKit
+- Direct communication with TRVs (no cloud)
+- Battery, temperature, and valve state reporting
+- Fast polling and state updates
 
 ## Requirements
 
-- Node.js 18+
-- Homebridge 1.6+
-- Shelly BLU Gateway Gen3
-- Shelly BLU TRV
+- Homebridge v1.6+
+- Node.js v18+
+- Shelly Plus/Pro Gateway (with local network access)
+- Shelly BLU TRV devices
 
 ## Installation
 
-Install via npm:
+Install via Homebridge UI or npm:
 
-```bash
+```sh
 npm install -g homebridge-shelly-blu-trv
 ```
 
-## Configuration (Homebridge UI)
+## Configuration
 
-Add the platform under `platforms` in Homebridge configuration. Example:
+Add the platform to your Homebridge `config.json`. You **must** specify each gateway and the list of TRVs to control. **Automatic discovery is not supported.**
 
 ```json
 {
-  "platforms": [
+  "platform": "ShellyBluPlatform",
+  "gateways": [
     {
-      "platform": "ShellyBluTRV",
-      "gateways": [
-        {
-          "host": "192.168.1.50",
-          "token": "<optional-auth-token>",
-          "pollInterval": 60
-        }
+      "host": "192.168.1.10",
+      "token": "your-gateway-token",
+      "pollInterval": 60,
+      "devices": [
+        { "id": 123, "name": "Living Room" },
+        { "id": 456, "name": "Bedroom" }
       ]
     }
   ]
 }
 ```
 
-Notes:
+### Config Options
 
-- Auth token is optional.
-- Valve position is reported as 0–100% (read-only).
-- Offline TRVs are shown as “Not Responding” in HomeKit.
+- `host` (string, required): IP or hostname of your Shelly Plus/Pro Gateway
+- `token` (string, required): Gateway authentication token
+- `pollInterval` (number, optional): Polling interval in seconds (default: 60)
+- `devices` (array, required): List of TRVs to control. Each device must have:
+  - `id` (number, required): TRV device ID (as shown in the Shelly app or web UI)
+  - `name` (string, required): Name for HomeKit
 
----
+**Note:** You must manually add each TRV you want to control. The plugin will not scan or discover devices automatically.
 
-## Development
+## Usage
 
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Test: `npm test`
+Once configured, your Shelly BLU TRVs will appear in HomeKit as Thermostat accessories. You can control target temperature, view current temperature, battery, and valve state.
 
-Contributions welcome — open an issue or a pull request.
+## Troubleshooting
 
----
+- Ensure your Homebridge server can reach the Shelly Gateway and TRVs on the local network.
+- Double-check the device IDs and gateway token.
+- Check Homebridge logs for errors.
 
-## Local testing
+## Development & Testing
 
-To test the plugin locally in a running Homebridge instance:
+Run tests with:
 
-- Build a tarball: `npm pack`
-- Install into Homebridge (on same machine): `npm i -g ./homebridge-shelly-blu-trv-<version>.tgz` or upload the tarball in Homebridge UI as a plugin file.
+```sh
+npm test
+```
 
-To test in a development Homebridge container, you can mount the packed tarball or install from the working directory with `npm i -g` after `npm run build`.
+## License
 
-### E2E (fake gateway) tests
+MIT
 
 We include a simple fake Shelly BLU gateway and an E2E runner to validate discovery and polling locally:
 

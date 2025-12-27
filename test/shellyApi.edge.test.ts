@@ -15,21 +15,8 @@ afterEach(() => {
 });
 
 describe('ShellyApi edge cases', () => {
-  it('handles offline device reported in /status', async () => {
-    // RPC returns normal
-    fetchMock.mockImplementation(async (url: string) => {
-      if (url.includes('TRV.GetStatus')) {
-        return { ok: true, json: async () => ({ current_C: 18, target_C: 20, pos: 30 }) };
-      }
-      // /status report device offline
-      return { ok: true, json: async () => ({ ble: { devices: [{ id: 33, battery: 80, online: false }] } }) };
-    });
 
-    const api = new ShellyApi(gw, { debug: () => {}, error: () => {} } as any);
-    const s = await api.getTrvState(33);
-    expect(s.online).toBe(false);
-    expect(s.battery).toBe(80);
-  });
+  // Discovery and /status endpoint are no longer supported. Only direct endpoint edge cases are tested.
 
   it('throws when RPC returns non-ok HTTP status', async () => {
     fetchMock.mockImplementation(async (url: string) => {
