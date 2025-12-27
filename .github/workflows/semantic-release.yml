@@ -1,8 +1,8 @@
 name: Semantic Release
 
 on:
-  push:
-    branches: [ main ]
+  # Automatic releases are paused — use manual dispatch to run semantic-release when ready
+  workflow_dispatch: {}
 
 jobs:
   semantic-release:
