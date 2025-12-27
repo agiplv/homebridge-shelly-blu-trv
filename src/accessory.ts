@@ -68,10 +68,26 @@ export class ShellyTrvAccessory {
     try {
       const api = new ShellyApi(this.accessory.context.gateway, this.log);
       this.log.debug(`[${this.accessory.displayName}] Sending target temperature ${value}°C to device`);
-      const state = await api.setTargetTemp(this.accessory.context.device.id, value);
-      this.platform.stateCache.set(this.accessory.context.device.id, state);
-      this.log.info(`[${this.accessory.displayName}] Successfully set target temperature to ${value}°C, state updated: ${JSON.stringify(state)}`);
-      this.updateFromState(state);
+      await api.setTargetTemp(this.accessory.context.device.id, value);
+      // Wait for confirmation that the device state matches the new target
+      const maxTries = 10;
+      const delayMs = 1000;
+      let confirmedState: TrvState | null = null;
+      for (let i = 0; i < maxTries; i++) {
+        const state = await api.getTrvState(this.accessory.context.device.id);
+        if (state.targetTemp === value) {
+          confirmedState = state;
+          break;
+        }
+        await new Promise(res => setTimeout(res, delayMs));
+      }
+      if (!confirmedState) {
+        this.log.warn(`[${this.accessory.displayName}] Target temperature not confirmed after ${maxTries} tries, using last state`);
+        confirmedState = await api.getTrvState(this.accessory.context.device.id);
+      }
+      this.platform.stateCache.set(this.accessory.context.device.id, confirmedState);
+      this.log.info(`[${this.accessory.displayName}] Target temperature set to ${value}°C, confirmed state: ${JSON.stringify(confirmedState)}`);
+      this.updateFromState(confirmedState);
     } catch (error) {
       this.log.error(`[${this.accessory.displayName}] Failed to set target temperature: ${error instanceof Error ? error.message : String(error)}`);
       throw error;

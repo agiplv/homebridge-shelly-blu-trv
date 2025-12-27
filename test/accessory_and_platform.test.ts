@@ -99,6 +99,10 @@ describe('ShellyTrvAccessory', () => {
     const log = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as any;
 
     const setSpy = vi.spyOn(ShellyApi.prototype, 'setTargetTemp').mockResolvedValue({ currentTemp: 18.3, targetTemp: 23, valve: 40, battery: 77, online: true });
+    // Mock getTrvState to return the new value after first call
+    const getSpy = vi.spyOn(ShellyApi.prototype, 'getTrvState');
+    getSpy.mockResolvedValueOnce({ currentTemp: 18.3, targetTemp: 21, valve: 40, battery: 77, online: true });
+    getSpy.mockResolvedValue({ currentTemp: 18.3, targetTemp: 23, valve: 40, battery: 77, online: true });
 
     const acc = new ShellyTrvAccessory(platform as any, accessory as any, log);
     const svc = accessory.getService(hap.Service.Thermostat);
