@@ -82,6 +82,21 @@ To test the plugin locally in a running Homebridge instance:
 
 To test in a development Homebridge container, you can mount the packed tarball or install from the working directory with `npm i -g` after `npm run build`.
 
+### E2E (fake gateway) tests
+
+We include a simple fake Shelly BLU gateway and an E2E runner to validate discovery and polling locally:
+
+- Start the fake gateway + headless Homebridge locally: `npm run e2e` (the script builds the project and runs the fake gateway + Homebridge, it times out after ~60s if discovery/polling isn't observed).
+- The repository also includes a GitHub Actions workflow `.github/workflows/e2e.yml` that runs the same test in CI.
+
+### Coverage check
+
+To ensure coverage is sufficient:
+
+- Run tests with coverage: `npm test`
+- Check coverage threshold (lines): `npm run check-coverage` (configured to require at least 80% lines by default, set `COVERAGE_THRESHOLD` env to override)
+
+
 ## Publishing
 
 Automatic publishing is configured to run on new GitHub releases (see `.github/workflows/publish.yml`).
