@@ -6,7 +6,24 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov']
+      reporter: ['text', 'lcov'],
+      statements: 80,
+      branches: 75,
+      functions: 80,
+      lines: 80,
+      check: {
+        global: {
+          statements: 80,
+          branches: 75,
+          functions: 80,
+          lines: 80
+        }
+      },
+      exclude: [
+        'hb-test/**',
+        'scripts/**',
+        'node_modules/**'
+      ]
     }
   }
 });
