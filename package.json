@@ -38,12 +38,14 @@
     "prepublishOnly": "npm run build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags"
   },
-  "dependencies": {
+  "peerDependencies": {
     "homebridge": "^1.7.0"
   },
   "devDependencies": {
+    "homebridge": "^1.7.0",
     "@types/node": "^18.19.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -51,5 +53,8 @@
     "eslint": "^8.47.0",
     "typescript": "^5.3.3",
     "vitest": "^1.6.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
