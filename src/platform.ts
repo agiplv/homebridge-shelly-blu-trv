@@ -68,7 +68,9 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
         const poll = async () => {
           try {
             this.log.debug(`[ShellyBluPlatform] Polling state for TRV ${trv.id}`);
-            this.stateCache.set(trv.id, await api.getTrvState(trv.id));
+            const state = await api.getTrvState(trv.id);
+            this.stateCache.set(trv.id, state);
+            this.log.info(`[ShellyBluPlatform] Polled TRV ${trv.id} state: ${JSON.stringify(state)}`);
           } catch (error) {
             this.log.warn(`[ShellyBluPlatform] Failed to poll TRV ${trv.id}: ${error instanceof Error ? error.message : String(error)}`);
             this.stateCache.markOffline(trv.id);

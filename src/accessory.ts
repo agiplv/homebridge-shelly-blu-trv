@@ -67,8 +67,19 @@ export class ShellyTrvAccessory {
     try {
       const api = new ShellyApi(this.accessory.context.gateway, this.log);
       this.log.debug(`[${this.accessory.displayName}] Sending target temperature ${value}°C to device`);
-      await api.setTargetTemp(this.accessory.context.device.id, value);
-      this.log.info(`[${this.accessory.displayName}] Successfully set target temperature to ${value}°C`);
+      const state = await api.setTargetTemp(this.accessory.context.device.id, value);
+      this.platform.stateCache.set(this.accessory.context.device.id, state);
+      this.log.info(`[${this.accessory.displayName}] Successfully set target temperature to ${value}°C, state updated: ${JSON.stringify(state)}`);
+
+      // Immediately update Homebridge characteristics
+      const C = this.platform.api.hap.Characteristic;
+      const S = this.platform.api.hap.Service;
+      const t = this.accessory.getService(S.Thermostat)!;
+      t.getCharacteristic(C.CurrentTemperature).updateValue(state.currentTemp);
+      t.getCharacteristic(C.TargetTemperature).updateValue(state.targetTemp);
+      t.getCharacteristic(C.CurrentRelativeHumidity).updateValue(state.valve);
+      const b = this.accessory.getService(S.Battery)!;
+      b.getCharacteristic(C.BatteryLevel).updateValue(state.battery);
     } catch (error) {
       this.log.error(`[${this.accessory.displayName}] Failed to set target temperature: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
