@@ -8,7 +8,7 @@ function buildUrl(host: string, path: string, token?: string) {
 
 export class ShellyApi {
   constructor(private readonly gw: GatewayConfig, private readonly log: Logger) {}
-  private readonly requestTimeout = 5000;
+  private readonly requestTimeout = 60000; // 1 minute timeout
 
   private async get(path: string) {
     const url = buildUrl(this.gw.host, path, this.gw.token);
@@ -137,15 +137,30 @@ export class ShellyApi {
 
   async setTargetTemp(id: number, value: number) {
     this.log.debug(`[ShellyApi] Setting target temperature for TRV ${id} to ${value}°C`);
-    try {
-      // Include an explicit id:0 in params (observed in some firmware examples)
-      await this.rpcCall(id, 'TRV.SetTarget', { id: 0, target_C: value });
-      this.log.debug(`[ShellyApi] Successfully set target temperature for TRV ${id}`);
-      // Requery and return the updated state
-      return await this.getTrvState(id);
-    } catch (error) {
-      this.log.error(`[ShellyApi] Failed to set target temperature for TRV ${id}: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+    const maxAttempts = 5;
+    const retryDelay = 3000; // 3 seconds between retries
+    let lastError: unknown = null;
+    const startTime = Date.now();
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Include an explicit id:0 in params (observed in some firmware examples)
+        await this.rpcCall(id, 'TRV.SetTarget', { id: 0, target_C: value });
+        this.log.debug(`[ShellyApi] Successfully set target temperature for TRV ${id} (attempt ${attempt})`);
+        // Requery and return the updated state
+        return await this.getTrvState(id);
+      } catch (error) {
+        lastError = error;
+        this.log.warn(`[ShellyApi] Attempt ${attempt} to set target temperature for TRV ${id} failed: ${error instanceof Error ? error.message : String(error)}`);
+        if (Date.now() - startTime > this.requestTimeout) {
+          this.log.error(`[ShellyApi] setTargetTemp timed out after ${this.requestTimeout}ms for TRV ${id}`);
+          break;
+        }
+        if (attempt < maxAttempts) {
+          await new Promise(res => setTimeout(res, retryDelay));
+        }
+      }
     }
+    this.log.error(`[ShellyApi] Failed to set target temperature for TRV ${id} after ${maxAttempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+    throw lastError;
   }
 }
