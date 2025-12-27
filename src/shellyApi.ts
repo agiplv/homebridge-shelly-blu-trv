@@ -41,6 +41,7 @@ export class ShellyApi {
 
   private async rpcCall(id: number, method: string, params?: unknown) {
     // Try several RPC variants for wider compatibility with firmware differences
+    const quotedMethod = `"${method}"`;
     const paramsStr = params ? `&params=${encodeURIComponent(JSON.stringify(params))}` : '';
 
     // Try direct GetStatus endpoints first (some firmwares expose dedicated GET endpoints)
@@ -51,10 +52,10 @@ export class ShellyApi {
     }
 
     // Common CALL variants (different firmware use call vs Call and different query separators)
-    candidates.push(`/rpc/BluTrv.Call?id=${id}&method=${method}${paramsStr}`);
-    candidates.push(`/rpc/BluTrv.call?id=${id}&method=${method}${paramsStr}`);
-    candidates.push(`/rpc/BluTrv.Call&id=${id}&method=${method}${paramsStr}`);
-    candidates.push(`/rpc/BluTrv.call&id=${id}&method=${method}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.Call?id=${id}&method=${quotedMethod}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.call?id=${id}&method=${quotedMethod}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.Call&id=${id}&method=${quotedMethod}${paramsStr}`);
+    candidates.push(`/rpc/BluTrv.call&id=${id}&method=${quotedMethod}${paramsStr}`);
 
     for (const path of candidates) {
       try {
