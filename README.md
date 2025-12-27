@@ -92,7 +92,14 @@ To publish manually:
 3. Bump the version and push tags, or run `npm version <patch|minor|major>` and push tags.
 4. Publish: `npm publish --access public`.
 
-If you'd like automated semantic releases, I can add `semantic-release` config and a workflow.
+Automated semantic releases are configured with `semantic-release`. The workflow runs on pushes to `main` and publishes a GitHub Release + npm package when a new release is performed.
+
+Note: You must add the following repository secrets for automatic publishing to work:
+
+- `NPM_TOKEN` — npm token with publish permissions
+- `GITHUB_TOKEN` — typically provided automatically by GitHub Actions (`secrets.GITHUB_TOKEN`) but keep it available if you customize tokens
+
+If you'd like me to open a PR with this setup and add a draft release, say so and I will create the branch and PR now.
 
 ## License
 
