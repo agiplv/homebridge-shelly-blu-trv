@@ -177,4 +177,40 @@ describe('ShellyBluPlatform', () => {
     expect(state).toBeDefined();
     expect(state?.currentTemp).toBe(16);
   });
+
+  it('falls back to manual devices when discovery fails', async () => {
+    const hap = createMockHap();
+    const registered: any[] = [];
+    const fakeApi: any = {
+      hap,
+      platformAccessory: (function() {
+        return function PlatformAccessory(name: string, uuid: string) {
+          const obj = createMockAccessory(name, 999, hap);
+          Object.assign(this, obj);
+        };
+      })(),
+      registerPlatformAccessories: (pluginName: string, platformName: string, accs: any[]) => {
+        registered.push(...accs);
+      },
+      on: (_ev: string, _cb: any) => { /* noop */ }
+    };
+
+    const log = { debug: () => {}, info: () => {}, warn: vi.fn(), error: () => {} } as any;
+    const config = { gateways: [{ host: 'gw', token: 't', pollInterval: 60, devices: [{ id: 42, name: 'Manual TRV' }] }] } as any;
+
+    const discoverSpy = vi.spyOn(ShellyApi.prototype, 'discoverTrvs').mockRejectedValue(new Error('404 Not Found'));
+    const stateSpy = vi.spyOn(ShellyApi.prototype, 'getTrvState').mockResolvedValue({ currentTemp: 21, targetTemp: 22, valve: 33, battery: 50, online: true });
+
+    const platform = new ShellyBluPlatform(log, config, fakeApi as any);
+    await platform.discover();
+    await new Promise((r) => setImmediate(r));
+
+    expect(discoverSpy).toHaveBeenCalled();
+    expect(registered.length).toBe(1);
+
+    const state = platform.stateCache.get(42);
+    expect(state).toBeDefined();
+    expect(state?.currentTemp).toBe(21);
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Discovery failed'));
+  });
 });

@@ -24,6 +24,17 @@
               "title": "Polling interval (seconds)",
               "default": 60,
               "minimum": 15
+            },
+            "devices": {
+              "type": "array",
+              "title": "Manual TRV devices (optional)",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "number", "title": "TRV ID", "required": true },
+                  "name": { "type": "string", "title": "Display name" }
+                }
+              }
             }
           }
         }

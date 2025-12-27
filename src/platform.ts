@@ -49,9 +49,19 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
       try {
         trvs = await api.discoverTrvs();
         this.log.info(`[ShellyBluPlatform] Discovered ${trvs.length} TRV(s) on gateway ${gw.host}`);
+        // If discovery returned nothing but user provided manual devices, use them
+        if ((!trvs || trvs.length === 0) && gw.devices && gw.devices.length > 0) {
+          this.log.warn(`[ShellyBluPlatform] Discovery returned no devices; using manual device list for gateway ${gw.host}`);
+          trvs = gw.devices.map((d) => ({ id: d.id, name: d.name || `BLU TRV ${d.id}` }));
+        }
       } catch (error) {
-        this.log.error(`[ShellyBluPlatform] Failed to discover devices on gateway ${gw.host}: ${error instanceof Error ? error.message : String(error)}`);
-        continue;
+        if (gw.devices && gw.devices.length > 0) {
+          this.log.warn(`[ShellyBluPlatform] Discovery failed for gateway ${gw.host}, using manual device list: ${error instanceof Error ? error.message : String(error)}`);
+          trvs = gw.devices.map((d) => ({ id: d.id, name: d.name || `BLU TRV ${d.id}` }));
+        } else {
+          this.log.error(`[ShellyBluPlatform] Failed to discover devices on gateway ${gw.host}: ${error instanceof Error ? error.message : String(error)}`);
+          continue;
+        }
       }
 
       for (const trv of trvs) {
