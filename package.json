@@ -38,18 +38,31 @@
     "prepublishOnly": "npm run build",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags",
+    "semantic-release": "semantic-release"
   },
-  "dependencies": {
+  "peerDependencies": {
     "homebridge": "^1.7.0"
   },
   "devDependencies": {
+    "homebridge": "^1.7.0",
     "@types/node": "^18.19.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitest/coverage-v8": "^1.6.1",
     "eslint": "^8.47.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.6.1"
+    "vitest": "^1.6.1",
+    "semantic-release": "^21.0.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/commit-analyzer": "^10.0.0",
+    "@semantic-release/github": "^9.0.0",
+    "@semantic-release/npm": "^9.0.0",
+    "@semantic-release/release-notes-generator": "^12.0.0",
+    "@semantic-release/git": "^10.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
