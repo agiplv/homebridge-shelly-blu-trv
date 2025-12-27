@@ -21,7 +21,6 @@ export default defineConfig({
       },
       exclude: [
         'hb-test/**',
-        'scripts/**',
         'node_modules/**'
       ]
     }

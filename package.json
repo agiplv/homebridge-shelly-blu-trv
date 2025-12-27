@@ -40,8 +40,7 @@
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts",
     "check-coverage": "node scripts/check-coverage.js",
-    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags",
-    "semantic-release": "semantic-release"
+    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags"
   },
   "peerDependencies": {
     "homebridge": "^1.7.0"
@@ -54,14 +53,7 @@
     "@vitest/coverage-v8": "^1.6.1",
     "eslint": "^8.47.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.6.1",
-    "semantic-release": "^21.0.0",
-    "@semantic-release/changelog": "^6.0.0",
-    "@semantic-release/commit-analyzer": "^10.0.0",
-    "@semantic-release/github": "^9.0.0",
-    "@semantic-release/npm": "^9.0.0",
-    "@semantic-release/release-notes-generator": "^12.0.0",
-    "@semantic-release/git": "^10.0.0"
+    "vitest": "^1.6.1"
   },
   "publishConfig": {
     "access": "public"
