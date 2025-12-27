@@ -26,6 +26,8 @@ jobs:
         run: npm run lint --silent || true
       - name: Test
         run: npm test
+      - name: Check coverage
+        run: npm run check-coverage
 
       - name: Check coverage threshold
         run: npm run check-coverage
