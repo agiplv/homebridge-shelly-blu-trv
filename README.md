@@ -93,49 +93,10 @@ The default threshold is 80% lines (set `COVERAGE_THRESHOLD` env to override).
 MIT
 
 
-## Publishing
-
-### Manual device configuration (fallback when discovery unavailable) ✅
-
-If your Shelly BLU Gateway Gen3 does not expose the `/status` discovery endpoint (returns 404) or discovery is otherwise unavailable, you can manually configure TRV devices in the gateway entry of your Homebridge config. The plugin will use this list when discovery fails or returns no devices.
-
-Example gateway configuration with manual devices:
-
-```json
-{
-  "platforms": [
-    {
-      "platform": "ShellyBluTRV",
-      "gateways": [
-        {
-          "host": "10.0.0.171",
-          "token": "<optional-auth-token>",
-          "pollInterval": 60,
-          "devices": [
-            { "id": 100, "name": "Living TRV" },
-            { "id": 101, "name": "Kitchen TRV" }
-          ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-Notes:
-
-- `id` is the TRV numeric id assigned by the gateway; the plugin uses this id for polling and state updates.
-- If `name` is omitted, a default name `BLU TRV <id>` will be used.
-- When both discovery and manual `devices` are available, discovery takes precedence.
-
 
 ## Publishing
 
-- The repository contains two publishing workflows:
-  - **Publish** (`.github/workflows/publish.yml`) — runs when a GitHub Release is *created* and performs an `npm publish` step.
-  - **Semantic Release** (`.github/workflows/semantic-release.yml`) — when enabled, automatically creates releases, changelogs and publishes to npm on `main` via `semantic-release`.
-
-**NOTE:** The automatic semantic-release runs are currently **paused** (workflow trigger switched to `workflow_dispatch`). To run it manually: go to the Actions tab → **Semantic Release** → **Run workflow** (choose `main`).
+- The repository contains a publish workflow (`.github/workflows/publish.yml`) that runs when a GitHub Release is created and performs an `npm publish` step.
 
 Manual publish steps:
 1. Ensure you're logged in to npm: `npm login`.
