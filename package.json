@@ -39,6 +39,8 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts",
+    "e2e": "node scripts/run-e2e.js",
+    "check-coverage": "node scripts/check-coverage.js",
     "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags",
     "semantic-release": "semantic-release"
   },
