@@ -9,7 +9,19 @@ function createMockHap() {
     CurrentTemperature: 'CurrentTemperature',
     TargetTemperature: 'TargetTemperature',
     CurrentRelativeHumidity: 'CurrentRelativeHumidity',
-    BatteryLevel: 'BatteryLevel'
+    BatteryLevel: 'BatteryLevel',
+    StatusLowBattery: {
+      BATTERY_LEVEL_NORMAL: 0,
+      BATTERY_LEVEL_LOW: 1
+    },
+    CurrentHeatingCoolingState: {
+      HEAT: 1,
+      OFF: 0
+    },
+    TargetHeatingCoolingState: {
+      HEAT: 1,
+      OFF: 0
+    }
   };
   const Service: any = {
     Thermostat: 'Thermostat',
