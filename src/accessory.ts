@@ -95,7 +95,8 @@ export class ShellyTrvAccessory {
       await api.setTargetTemp(this.accessory.context.device.id, value);
       const confirmedState = await this.confirmTargetTemperature(api, value);
       this.platform.stateCache.set(this.accessory.context.device.id, confirmedState);
-      this.log.info(`[${this.accessory.displayName}] Target temperature set to ${value}°C, confirmed state: ${JSON.stringify(confirmedState)}`);
+      const stateStr = `🌡️ ${confirmedState.currentTemp}°C → ${confirmedState.targetTemp}°C | 💧${confirmedState.valve}% | 🔋${confirmedState.battery}% | ${confirmedState.online ? '🟢' : '🔴'}`;
+      this.log.info(`[${this.accessory.displayName}] Target temperature set to ${value}°C, confirmed state: ${stateStr}`);
       this.updateFromState(confirmedState);
     } catch (error) {
       this.log.error(`[${this.accessory.displayName}] Failed to set target temperature: ${error instanceof Error ? error.message : String(error)}`);
@@ -144,7 +145,8 @@ export class ShellyTrvAccessory {
       );
       t.getCharacteristic(this.C.CurrentHeatingCoolingState).updateValue(this.C.CurrentHeatingCoolingState.HEAT);
       t.getCharacteristic(this.C.TargetHeatingCoolingState).updateValue(this.C.TargetHeatingCoolingState.HEAT);
-      this.log.debug(`[${this.accessory.displayName}] updateFromState: ${JSON.stringify(state)}`);
+      const stateStr = `🌡️ ${state.currentTemp}°C → ${state.targetTemp}°C | 💧${state.valve}% | 🔋${state.battery}% | ${state.online ? '🟢' : '🔴'}`;
+      this.log.debug(`[${this.accessory.displayName}] updateFromState: ${stateStr}`);
     }
   }
 }
