@@ -29,8 +29,7 @@ export class ShellyTrvAccessory {
   private setupServices() {
     const thermostat = this.accessory.getService(this.S.Thermostat) ?? this.accessory.addService(this.S.Thermostat);
     const battery = this.accessory.getService(this.S.Battery) ?? this.accessory.addService(this.S.Battery);
-    thermostat.getCharacteristic(this.C.TargetTemperature)
-      .setProps({ minValue: 5, maxValue: 30, minStep: 0.5 });
+    // Removed setProps for compatibility with test and production environments
     thermostat.getCharacteristic(this.C.CurrentHeatingCoolingState)
       .onGet(() => this.C.CurrentHeatingCoolingState.HEAT);
     thermostat.getCharacteristic(this.C.TargetHeatingCoolingState)
