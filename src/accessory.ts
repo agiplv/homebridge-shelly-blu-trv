@@ -10,51 +10,69 @@ export class ShellyTrvAccessory {
     private readonly log: Logger
   ) {
     this.log.debug(`[${accessory.displayName}] Initializing TRV accessory`);
-    const S = platform.api.hap.Service;
-    accessory.getService(S.Thermostat) ?? accessory.addService(S.Thermostat);
-    accessory.getService(S.Battery) ?? accessory.addService(S.Battery);
+    this.setupServices();
     this.log.debug(`[${accessory.displayName}] Services configured`);
-    this.bind();
+    this.bindCharacteristics();
   }
 
-  private bind() {
-    const C = this.platform.api.hap.Characteristic;
-    const S = this.platform.api.hap.Service;
-    const t = this.accessory.getService(S.Thermostat)!;
-    const b = this.accessory.getService(S.Battery)!;
+  private get S() { return this.platform.api.hap.Service; }
+  private get C() { return this.platform.api.hap.Characteristic; }
 
-    this.log.debug(`[${this.accessory.displayName}] Binding characteristics`);
+  private getThermostat() {
+    return this.accessory.getService(this.S.Thermostat)!;
+  }
 
-    t.getCharacteristic(C.CurrentTemperature).onGet(() => {
+  private getBattery() {
+    return this.accessory.getService(this.S.Battery)!;
+  }
+
+  private setupServices() {
+    const thermostat = this.accessory.getService(this.S.Thermostat) ?? this.accessory.addService(this.S.Thermostat);
+    const battery = this.accessory.getService(this.S.Battery) ?? this.accessory.addService(this.S.Battery);
+    thermostat.getCharacteristic(this.C.TargetTemperature)
+      .setProps({ minValue: 5, maxValue: 30, minStep: 0.5 });
+    thermostat.getCharacteristic(this.C.CurrentHeatingCoolingState)
+      .onGet(() => this.C.CurrentHeatingCoolingState.HEAT);
+    thermostat.getCharacteristic(this.C.TargetHeatingCoolingState)
+      .onGet(() => this.C.TargetHeatingCoolingState.HEAT)
+      .onSet(() => {/* Only HEAT supported */});
+    battery.getCharacteristic(this.C.StatusLowBattery)
+      .onGet(() => this.C.StatusLowBattery.BATTERY_LEVEL_NORMAL);
+  }
+
+  private bindCharacteristics() {
+    const t = this.getThermostat();
+    const b = this.getBattery();
+    t.getCharacteristic(this.C.CurrentTemperature).onGet(() => {
       this.log.debug(`[${this.accessory.displayName}] Getting current temperature`);
-      return this.get("currentTemp");
+      return this.getStateValue("currentTemp");
     });
-    t.getCharacteristic(C.TargetTemperature)
+    t.getCharacteristic(this.C.TargetTemperature)
       .onGet(() => {
         this.log.debug(`[${this.accessory.displayName}] Getting target temperature`);
-        return this.get("targetTemp");
+        return this.getStateValue("targetTemp");
       })
       .onSet(v => {
         this.log.info(`[${this.accessory.displayName}] Setting target temperature to ${v}°C`);
         return this.setTarget(v as number);
       });
-
-    t.getCharacteristic(C.CurrentRelativeHumidity).onGet(() => {
+    // Valve position as CurrentRelativeHumidity (Home app will show humidity icon)
+    t.getCharacteristic(this.C.CurrentRelativeHumidity).onGet(() => {
       this.log.debug(`[${this.accessory.displayName}] Getting valve position`);
-      return this.get("valve");
+      return this.getStateValue("valve");
     });
-    b.getCharacteristic(C.BatteryLevel).onGet(() => {
+    b.getCharacteristic(this.C.BatteryLevel).onGet(() => {
       this.log.debug(`[${this.accessory.displayName}] Getting battery level`);
-      return this.get("battery");
+      return this.getStateValue("battery");
     });
   }
 
-  private get(key: keyof TrvState) {
+
+  private getStateValue(key: keyof TrvState) {
     const id = this.accessory.context.device.id;
     const s = this.platform.stateCache.get(id);
     if (!s || !s.online) {
       this.log.warn(`[${this.accessory.displayName}] Device offline, unable to retrieve ${key}`);
-      this.updateFromState({ currentTemp: 0, targetTemp: 0, valve: 0, battery: 0, online: false });
       throw new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE
       );
@@ -65,26 +83,11 @@ export class ShellyTrvAccessory {
   }
 
   private async setTarget(value: number) {
+    const api = new ShellyApi(this.accessory.context.gateway, this.log);
+    this.log.debug(`[${this.accessory.displayName}] Sending target temperature ${value}°C to device`);
     try {
-      const api = new ShellyApi(this.accessory.context.gateway, this.log);
-      this.log.debug(`[${this.accessory.displayName}] Sending target temperature ${value}°C to device`);
       await api.setTargetTemp(this.accessory.context.device.id, value);
-      // Wait for confirmation that the device state matches the new target
-      const maxTries = 10;
-      const delayMs = 1000;
-      let confirmedState: TrvState | null = null;
-      for (let i = 0; i < maxTries; i++) {
-        const state = await api.getTrvState(this.accessory.context.device.id);
-        if (state.targetTemp === value) {
-          confirmedState = state;
-          break;
-        }
-        await new Promise(res => setTimeout(res, delayMs));
-      }
-      if (!confirmedState) {
-        this.log.warn(`[${this.accessory.displayName}] Target temperature not confirmed after ${maxTries} tries, using last state`);
-        confirmedState = await api.getTrvState(this.accessory.context.device.id);
-      }
+      const confirmedState = await this.confirmTargetTemperature(api, value);
       this.platform.stateCache.set(this.accessory.context.device.id, confirmedState);
       this.log.info(`[${this.accessory.displayName}] Target temperature set to ${value}°C, confirmed state: ${JSON.stringify(confirmedState)}`);
       this.updateFromState(confirmedState);
@@ -94,26 +97,47 @@ export class ShellyTrvAccessory {
     }
   }
 
+  private async confirmTargetTemperature(api: ShellyApi, value: number): Promise<TrvState> {
+    const maxTries = 10;
+    const delayMs = 1000;
+    for (let i = 0; i < maxTries; i++) {
+      const state = await api.getTrvState(this.accessory.context.device.id);
+      if (state.targetTemp === value) {
+        return state;
+      }
+      await new Promise(res => setTimeout(res, delayMs));
+    }
+    this.log.warn(`[${this.accessory.displayName}] Target temperature not confirmed after ${maxTries} tries, using last state`);
+    return await api.getTrvState(this.accessory.context.device.id);
+  }
+
   /**
    * Pushes the latest state to Homebridge characteristics.
    * If offline, sets values to 0 and logs a warning.
    */
   updateFromState(state: TrvState) {
-    const C = this.platform.api.hap.Characteristic;
-    const S = this.platform.api.hap.Service;
-    const t = this.accessory.getService(S.Thermostat)!;
-    const b = this.accessory.getService(S.Battery)!;
+    const t = this.getThermostat();
+    const b = this.getBattery();
     if (!state.online) {
-      t.getCharacteristic(C.CurrentTemperature).updateValue(0);
-      t.getCharacteristic(C.TargetTemperature).updateValue(0);
-      t.getCharacteristic(C.CurrentRelativeHumidity).updateValue(0);
-      b.getCharacteristic(C.BatteryLevel).updateValue(0);
-      this.log.warn(`[${this.accessory.displayName}] Device offline, set all values to 0`);
+      // Use NaN for offline, or a value outside valid range, to avoid confusion
+      t.getCharacteristic(this.C.CurrentTemperature).updateValue(NaN);
+      t.getCharacteristic(this.C.TargetTemperature).updateValue(NaN);
+      t.getCharacteristic(this.C.CurrentRelativeHumidity).updateValue(0);
+      b.getCharacteristic(this.C.BatteryLevel).updateValue(0);
+      b.getCharacteristic(this.C.StatusLowBattery).updateValue(this.C.StatusLowBattery.BATTERY_LEVEL_LOW);
+      t.getCharacteristic(this.C.CurrentHeatingCoolingState).updateValue(this.C.CurrentHeatingCoolingState.OFF);
+      t.getCharacteristic(this.C.TargetHeatingCoolingState).updateValue(this.C.TargetHeatingCoolingState.OFF);
+      this.log.warn(`[${this.accessory.displayName}] Device offline, set values to NaN/0/OFF`);
     } else {
-      t.getCharacteristic(C.CurrentTemperature).updateValue(state.currentTemp);
-      t.getCharacteristic(C.TargetTemperature).updateValue(state.targetTemp);
-      t.getCharacteristic(C.CurrentRelativeHumidity).updateValue(state.valve);
-      b.getCharacteristic(C.BatteryLevel).updateValue(state.battery);
+      t.getCharacteristic(this.C.CurrentTemperature).updateValue(state.currentTemp);
+      t.getCharacteristic(this.C.TargetTemperature).updateValue(state.targetTemp);
+      t.getCharacteristic(this.C.CurrentRelativeHumidity).updateValue(state.valve);
+      b.getCharacteristic(this.C.BatteryLevel).updateValue(state.battery);
+      b.getCharacteristic(this.C.StatusLowBattery).updateValue(
+        state.battery <= 20 ? this.C.StatusLowBattery.BATTERY_LEVEL_LOW : this.C.StatusLowBattery.BATTERY_LEVEL_NORMAL
+      );
+      t.getCharacteristic(this.C.CurrentHeatingCoolingState).updateValue(this.C.CurrentHeatingCoolingState.HEAT);
+      t.getCharacteristic(this.C.TargetHeatingCoolingState).updateValue(this.C.TargetHeatingCoolingState.HEAT);
       this.log.debug(`[${this.accessory.displayName}] updateFromState: ${JSON.stringify(state)}`);
     }
   }
