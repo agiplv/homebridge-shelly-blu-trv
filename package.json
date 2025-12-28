@@ -1,7 +1,7 @@
 {
   "name": "homebridge-shelly-blu-trv",
   "displayName": "Shelly BLU TRV",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Homebridge plugin for Shelly BLU TRV thermostats via Shelly BLU Gateway Gen3",
   "license": "MIT",
   "author": "agiplv",
