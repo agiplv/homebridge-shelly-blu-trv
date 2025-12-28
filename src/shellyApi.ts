@@ -99,6 +99,10 @@ export class ShellyApi {
         if (attempt < maxAttempts) await new Promise(res => setTimeout(res, delayMs));
       }
     }
+    // Final failure log for visibility
+    if (lastError) {
+      this.log.error(`[ShellyApi][${this.gw.host}] All ${maxAttempts} retry attempts failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+    }
     throw lastError;
   }
 
@@ -136,13 +140,15 @@ export class ShellyApi {
     this.log.debug(`${logPrefix(this.gw.host)} Setting target temperature for TRV ${id} to ${value}°C`);
     const maxAttempts = 5;
     const retryDelay = 3000;
+    // Try to get device name from gateway config if available
+    const trvName = (this.gw.devices?.find?.((d: any) => d.id === id)?.name) || `TRV ${id}`;
     return this.retry(async () => {
       // Include an explicit id:0 in params (observed in some firmware examples)
       await this.rpcCall(id, 'TRV.SetTarget', { id: 0, target_C: value });
-      this.log.debug(`${logPrefix(this.gw.host)} Successfully set target temperature for TRV ${id}`);
+      this.log.debug(`${logPrefix(this.gw.host)} Successfully set target temperature for ${trvName} (id=${id})`);
       return await this.getTrvState(id);
     }, maxAttempts, retryDelay, this.requestTimeout, (err, attempt) => {
-      this.log.warn(`${logPrefix(this.gw.host)} Attempt ${attempt} to set target temperature for TRV ${id} failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.log.warn(`${logPrefix(this.gw.host)} Attempt ${attempt} to set target temperature for ${trvName} (id=${id}) failed: ${err instanceof Error ? err.message : String(err)}`);
     });
   }
 }

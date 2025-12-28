@@ -69,15 +69,22 @@ export class ShellyTrvAccessory {
 
   private getStateValue(key: keyof TrvState) {
     const id = this.accessory.context.device.id;
+    const name = this.accessory.context.device.name || this.accessory.displayName;
     const s = this.platform.stateCache.get(id);
-    if (!s || !s.online) {
-      this.log.warn(`[${this.accessory.displayName}] Device offline, unable to retrieve ${key}`);
+    if (!s) {
+      this.log.debug(`[${name} | id=${id}] State not yet available, unable to retrieve '${key}'. Waiting for first poll.`);
+      throw new this.platform.api.hap.HapStatusError(
+        this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE
+      );
+    }
+    if (!s.online) {
+      this.log.warn(`[${name} | id=${id}] Device offline, unable to retrieve '${key}'.`);
       throw new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE
       );
     }
     const value = s[key];
-    this.log.debug(`[${this.accessory.displayName}] Retrieved ${key}: ${value}`);
+    this.log.debug(`[${name} | id=${id}] Retrieved '${key}': ${value}`);
     return value;
   }
 
