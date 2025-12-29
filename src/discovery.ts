@@ -40,7 +40,7 @@ export class ShellyDiscovery {
     }
   }
 
-  async discoverGateways(timeoutMs = 5000): Promise<DiscoveredGateway[]> {
+  async discoverGateways(timeoutMs = 30000): Promise<DiscoveredGateway[]> {
     const bonjour = new Bonjour();
     const foundIPs = new Set<string>();
     const results: DiscoveredGateway[] = [];
