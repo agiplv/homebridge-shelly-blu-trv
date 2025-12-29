@@ -13,6 +13,8 @@ export class ShellyTrvAccessory {
     this.setupServices();
     this.log.debug(`[${accessory.displayName}] Services configured`);
     this.bindCharacteristics();
+    // Set AccessoryInformation characteristics
+    this.setAccessoryInformation();
   }
 
   private get S() { return this.platform.api.hap.Service; }
@@ -147,6 +149,25 @@ export class ShellyTrvAccessory {
       t.getCharacteristic(this.C.TargetHeatingCoolingState).updateValue(this.C.TargetHeatingCoolingState.HEAT);
       const stateStr = `🌡️ ${state.currentTemp}°C → ${state.targetTemp}°C | 💧${state.valve}% | 🔋${state.battery}% | ${state.online ? '🟢' : '🔴'}`;
       this.log.debug(`[${this.accessory.displayName}] updateFromState: ${stateStr}`);
+    }
+  }
+
+  /**
+   * Fetch and set AccessoryInformation characteristics from device info
+   */
+  private async setAccessoryInformation() {
+    const infoService = this.accessory.getService(this.S.AccessoryInformation) || this.accessory.addService(this.S.AccessoryInformation);
+    try {
+      const api = new ShellyApi(this.accessory.context.gateway, this.log);
+      const id = this.accessory.context.device.id;
+      const info = await api.getTrvDeviceInfo(id);
+      infoService.setCharacteristic(this.C.Manufacturer, "Shelly");
+      infoService.setCharacteristic(this.C.Model, info.model || "BluTRV");
+      infoService.setCharacteristic(this.C.SerialNumber, info.id || info.mac || String(id));
+      infoService.setCharacteristic(this.C.FirmwareRevision, info.ver || info.fw_id || "");
+      this.log.info(`[${this.accessory.displayName}] Set AccessoryInformation: model=${info.model}, serial=${info.id}, fw=${info.ver}`);
+    } catch (err) {
+      this.log.warn(`[${this.accessory.displayName}] Could not fetch device info for AccessoryInformation: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

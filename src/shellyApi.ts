@@ -151,4 +151,27 @@ export class ShellyApi {
       this.log.warn(`${logPrefix(this.gw.host)} Attempt ${attempt} to set target temperature for ${trvName} (id=${id}) failed: ${err instanceof Error ? err.message : String(err)}`);
     });
   }
+
+  /**
+   * Fetches device info for a TRV (manufacturer, model, serial, firmware).
+   * Returns { id, mac, fw_id, model, ver, batch, app, bl_ver }
+   */
+  async getTrvDeviceInfo(id: number): Promise<{
+    id: string;
+    mac: string;
+    fw_id: string;
+    model: string;
+    ver: string;
+    batch?: string;
+    app?: string;
+    bl_ver?: number;
+  }> {
+    this.log.debug(`${logPrefix(this.gw.host)} Fetching device info for TRV ${id}`);
+    const path = `/rpc/BluTrv.GetRemoteDeviceInfo?id=${id}`;
+    const data = await this.get(path);
+    if (!data || !data.device_info) {
+      throw new Error(`Device info not found in response: ${JSON.stringify(data)}`);
+    }
+    return data.device_info;
+  }
 }
