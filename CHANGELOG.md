@@ -1,6 +1,17 @@
 
 # Changelog
 
+## [1.3.0] - 2025-12-29
+### Added
+- **Auto-Discovery**: Automatically discover Shelly BLU Gateways on the local network using mDNS
+- Merge auto-discovered gateways with manual configuration (no duplicates)
+- New `enableAutoDiscovery` config option (default: `true`)
+- Comprehensive discovery tests with 97.8% code coverage
+
+### Changed
+- Configuration schema updated to make `gateways` array optional when auto-discovery is enabled
+- Updated documentation with auto-discovery examples and mixed-mode configuration
+
 ## [Unreleased]
 ### Changed
 - **Breaking:** Removed all automatic device discovery. You must now manually configure each gateway and TRV device in the Homebridge config.
