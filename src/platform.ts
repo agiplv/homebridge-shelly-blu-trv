@@ -52,8 +52,9 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
         const uuid = this.api.hap.uuid.generate(`${gw.host}-${trv.id}`);
         let acc = this.accessories.get(uuid);
         let trvAcc: ShellyTrvAccessory;
+        const trvLabel = `${trv.name} (id=${trv.id})`;
         if (!acc) {
-          this.log.info(`[ShellyBluPlatform] Adding new accessory: ${trv.name} (ID: ${trv.id})`);
+          this.log.info(`[ShellyBluPlatform] Adding new accessory: ${trvLabel}`);
           acc = new this.api.platformAccessory(trv.name, uuid);
           acc.context.device = trv;
           acc.context.gateway = gw;
@@ -65,11 +66,27 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
           );
           this.accessories.set(uuid, acc);
         } else {
-          this.log.debug(`[ShellyBluPlatform] Accessory already cached: ${trv.name}`);
+          this.log.debug(`[ShellyBluPlatform] Accessory already cached: ${trvLabel}`);
           // If already exists, try to get the instance from map, or create if missing
           trvAcc = this.trvInstances.get(trv.id) || new ShellyTrvAccessory(this, acc, this.log);
         }
         this.trvInstances.set(trv.id, trvAcc);
+        const poll = async () => {
+          try {
+            this.log.debug(`[ShellyBluPlatform] Polling state for ${trvLabel}`);
+            const state = await api.getTrvState(trv.id);
+            this.stateCache.set(trv.id, state);
+            const stateStr = `🌡️ ${state.currentTemp}°C → ${state.targetTemp}°C | 💧${state.valve}% | 🔋${state.battery}% | ${state.online ? '🟢' : '🔴'}`;
+            this.log.info(`[ShellyBluPlatform] Polled ${trvLabel} state: ${stateStr}`);
+            trvAcc.updateFromState(state);
+          } catch (error) {
+            this.log.warn(`[ShellyBluPlatform] Failed to poll ${trvLabel}: ${error instanceof Error ? error.message : String(error)}`);
+            this.stateCache.markOffline(trv.id);
+          }
+        };
+        this.log.debug(`[ShellyBluPlatform] Starting polling for ${trvLabel} with interval ${pollMs}ms`);
+        poll();
+        setInterval(poll, pollMs);
       }
     }
   }
