@@ -46,16 +46,19 @@
     "homebridge": "^1.7.0"
   },
   "devDependencies": {
-    "homebridge": "^1.7.0",
     "@types/node": "^18.19.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitest/coverage-v8": "^1.6.1",
     "eslint": "^8.47.0",
+    "homebridge": "^1.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.6.1"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "bonjour-service": "^1.2.1"
   }
 }

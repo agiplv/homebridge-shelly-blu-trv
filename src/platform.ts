@@ -9,6 +9,7 @@ import { PLATFORM_NAME, GatewayConfig } from "./types";
 import { ShellyApi } from "./shellyApi";
 import { ShellyTrvAccessory } from "./accessory";
 import { StateCache } from "./stateCache";
+import { ShellyDiscovery } from "./discovery";
 
 export class ShellyBluPlatform implements DynamicPlatformPlugin {
   public readonly stateCache = new StateCache();
@@ -33,13 +34,56 @@ export class ShellyBluPlatform implements DynamicPlatformPlugin {
   }
 
   async discover() {
-    const gateways = (this.config.gateways ?? []) as GatewayConfig[];
+    let gateways = (this.config.gateways ?? []) as GatewayConfig[];
+    const enableAutoDiscovery = this.config.enableAutoDiscovery !== false; // Default to true
+
+    // Run auto-discovery if enabled
+    if (enableAutoDiscovery) {
+      this.log.info("[ShellyBluPlatform] Auto-discovery enabled, scanning for gateways...");
+      try {
+        const discovery = new ShellyDiscovery(this.log);
+        const discovered = await discovery.discoverGateways();
+
+        // Build a map of manually configured devices by gateway host
+        const manualGateways = new Map<string, GatewayConfig>();
+        for (const gw of gateways) {
+          manualGateways.set(gw.host, gw);
+        }
+
+        // Merge discovered gateways with manual config
+        for (const disc of discovered) {
+          const manual = manualGateways.get(disc.host);
+          if (manual) {
+            // Gateway exists in manual config - merge TRVs
+            const manualTrvIds = new Set(manual.devices.map(d => d.id));
+            for (const trvId of disc.trvIds) {
+              if (!manualTrvIds.has(trvId)) {
+                manual.devices.push({ id: trvId, name: `TRV ${trvId}` });
+                this.log.info(`[Discovery] Added discovered TRV ${trvId} to gateway ${disc.host} (using default name)`);
+              }
+            }
+          } else {
+            // New gateway not in manual config - add it
+            const newGw: GatewayConfig = {
+              host: disc.host,
+              pollInterval: 60,
+              devices: disc.trvIds.map(id => ({ id, name: `TRV ${id}` }))
+            };
+            gateways.push(newGw);
+            this.log.info(`[Discovery] Added discovered gateway ${disc.host} with ${disc.trvIds.length} TRV(s)`);
+          }
+        }
+      } catch (error) {
+        this.log.error(`[ShellyBluPlatform] Error during auto-discovery: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
     if (gateways.length === 0) {
-      this.log.warn("[ShellyBluPlatform] No gateways configured in config.json");
+      this.log.warn("[ShellyBluPlatform] No gateways configured or discovered");
       return;
     }
 
-    this.log.info(`[ShellyBluPlatform] Registering manually configured TRVs for ${gateways.length} gateway(s)`);
+    this.log.info(`[ShellyBluPlatform] Discovered ${gateways.length} Shelly BLU TRV gateway(s)`);
 
     for (const gw of gateways) {
       if (!gw.devices || gw.devices.length === 0) {

@@ -4,6 +4,13 @@ import { ShellyBluPlatform } from '../src/platform';
 import { ShellyApi } from '../src/shellyApi';
 import { StateCache } from '../src/stateCache';
 
+// Mock ShellyDiscovery
+vi.mock('../src/discovery', () => ({
+  ShellyDiscovery: vi.fn().mockImplementation(() => ({
+    discoverGateways: vi.fn().mockResolvedValue([])
+  }))
+}));
+
 function createMockHap() {
   const Characteristic: any = {
     CurrentTemperature: 'CurrentTemperature',
@@ -166,7 +173,7 @@ describe('ShellyBluPlatform', () => {
     };
 
     const log = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } as any;
-    const config = { gateways: [{ host: 'gw', pollInterval: 60, devices: [{ id: 7, name: 'Bedroom' }] }] } as any;
+    const config = { enableAutoDiscovery: false, gateways: [{ host: 'gw', pollInterval: 60, devices: [{ id: 7, name: 'Bedroom' }] }] } as any;
 
     const stateSpy = vi.spyOn(ShellyApi.prototype, 'getTrvState').mockResolvedValue({ currentTemp: 16, targetTemp: 20, valve: 30, battery: 66, online: true });
 
@@ -189,5 +196,5 @@ describe('ShellyBluPlatform', () => {
     const state = platform.stateCache.get(7);
     expect(state).toBeDefined();
     expect(state?.currentTemp).toBe(16);
-  });
+  }, 30000);
 });

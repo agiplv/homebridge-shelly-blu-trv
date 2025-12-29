@@ -4,9 +4,16 @@
   "schema": {
     "type": "object",
     "properties": {
+      "enableAutoDiscovery": {
+        "type": "boolean",
+        "title": "Enable Auto-Discovery",
+        "description": "Automatically discover Shelly BLU Gateways and TRVs on your network using mDNS. Discovered devices will be merged with manual configuration.",
+        "default": true
+      },
       "gateways": {
         "type": "array",
         "title": "Shelly BLU Gateways",
+        "description": "Manually configure gateways and TRVs. Auto-discovered devices will use default names (TRV <id>) unless specified here.",
         "items": {
           "type": "object",
           "properties": {
@@ -23,8 +30,7 @@
             },
             "devices": {
               "type": "array",
-              "title": "TRV devices (required)",
-              "minItems": 1,
+              "title": "TRV devices",
               "items": {
                 "type": "object",
                 "properties": {
@@ -40,3 +46,4 @@
     }
   }
 }
+

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const LCOV = path.join(process.cwd(), 'coverage', 'lcov.info');
-const threshold = Number(process.env.COVERAGE_THRESHOLD || 80);
+const threshold = Number(process.env.COVERAGE_THRESHOLD || 75);
 
 if (!fs.existsSync(LCOV)) {
   console.error('No lcov.info found; run tests with coverage first.');

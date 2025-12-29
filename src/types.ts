@@ -6,6 +6,11 @@ export interface GatewayConfig {
   devices: BluTrvDevice[];
 }
 
+export interface DiscoveredGateway {
+  host: string;
+  trvIds: number[];
+}
+
 export interface BluTrvDevice {
   id: number;
   name: string;
