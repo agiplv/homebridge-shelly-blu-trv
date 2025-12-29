@@ -2,11 +2,7 @@
 
 [![CI](https://github.com/agiplv/homebridge-shelly-blu-trv/actions/workflows/ci.yml/badge.svg)](https://github.com/agiplv/homebridge-shelly-blu-trv/actions)
 
-Homebridge plugin for Shelly BLU Thermostatic Radiator Valve (TRV) devices
-
-# Homebridge Shelly BLU TRV Platform Plugin
-
-Homebridge plugin for controlling Shelly BLU TRV (Thermostatic Radiator Valve) devices via a Shelly Plus/Pro Gateway.
+Homebridge plugin for controlling Shelly BLU Thermostatic Radiator Valve (TRV) devices via a Shelly BLU Gateway
 
 ## Features
 
@@ -21,8 +17,8 @@ Homebridge plugin for controlling Shelly BLU TRV (Thermostatic Radiator Valve) d
 
 - Homebridge v1.6+
 - Node.js v18+
-- Shelly Plus/Pro Gateway (with local network access)
-- Shelly BLU TRV devices
+- Shelly BLU Gateway (Gen 3 with local RPC enabled)
+- Shelly BLU TRV devices (paired with the gateway)
 
 ## Installation
 
